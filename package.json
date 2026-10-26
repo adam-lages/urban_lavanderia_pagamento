@@ -4,7 +4,9 @@
   "type": "module",
   "workspaces": ["packages/*", "apps/*"],
   "scripts": {
+    "dev": "npm -w @lav/backend run dev",
     "dev:backend": "npm -w @lav/backend run dev",
+    "dev:mqtt": "npm -w @lav/backend run mqtt",
     "dev:dashboard": "npm -w @lav/dashboard run dev",
     "dev:simulator": "npm -w @lav/simulator run start",
     "test": "npm -w @lav/backend run test && npm -w @lav/simulator run test && npm -w @lav/dashboard run test",

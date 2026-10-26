@@ -1,27 +1,16 @@
-import net from "node:net";
-import { newDb } from "pg-mem";
-import aedes from "aedes";
 import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { migrate, wrapPool } from "../src/db.js";
 import { MqttGateway } from "../src/gateway.js";
+import { startEmbeddedBroker } from "../src/mqtt-broker.js";
 import { DeviceSimulator, type DeviceOptions } from "@lav/simulator";
+import { newDb } from "pg-mem";
 
 export const ADMIN = { authorization: "Bearer test-admin" };
 export const POS = { authorization: "Bearer test-pos" };
 
 export async function startBroker() {
-  const broker = (aedes as any)();
-  const server = net.createServer(broker.handle);
-  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
-  const url = `mqtt://127.0.0.1:${(server.address() as net.AddressInfo).port}`;
-  return {
-    url,
-    async close() {
-      await new Promise<void>((r) => broker.close(() => r()));
-      server.close();
-    },
-  };
+  return startEmbeddedBroker({ host: "127.0.0.1", port: 0 });
 }
 
 export async function startStack(overrides: Record<string, string> = {}) {
@@ -34,6 +23,8 @@ export async function startStack(overrides: Record<string, string> = {}) {
       ADMIN_TOKEN: "test-admin",
       POS_TOKEN: "test-pos",
       MQTT_URL: broker.url,
+      MQTT_EMBEDDED: "false",
+      DATABASE_EMBEDDED: "false",
       COMMAND_TTL_SECONDS: "60",
       ACK_TIMEOUT_SECONDS: "60",
       ...overrides,

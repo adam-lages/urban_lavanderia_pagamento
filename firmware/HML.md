@@ -28,7 +28,7 @@ O código é C++ para **ESP32**, com **PlatformIO** (caminho principal) ou **Ard
 - Uma placa **ESP32 DOIT DevKit V1** e cabo USB.
 - **PlatformIO** (`pip install platformio`, ou a extensão no VS Code) **ou** Arduino IDE 2 (mais trabalhoso; detalhes em `COMO-GRAVAR.md`).
 - Wi-Fi que a placa alcance (SSID/senha em `include/secrets.h`).
-- Backend + Mosquitto no ar **na mesma rede** (veja `apps/backend/HML.md`). Na placa, **não use `localhost`** como MQTT: `localhost` na ESP32 é ela mesma.
+- Backend no ar **na mesma rede** (veja `apps/backend/HML.md`). No computador, `npm run dev:backend` já sobe o MQTT na porta 1883 — **não precisa de Docker**. Na placa, **não use `localhost`** como MQTT: `localhost` na ESP32 é ela mesma. Use o IP do PC.
 
 Para testar o **contrato** sem placa: na raiz do repo, `npm run dev:simulator` (isso é Node, mas é o simulador em `apps/simulator`, não este firmware).
 
@@ -56,7 +56,7 @@ Arduino IDE: mesma ideia (placa DOIT ESP32 DEVKIT V1, bibliotecas PubSubClient e
 | `pio: command not found` | Instale PlatformIO (`pip install platformio` ou a extensão). |
 | `Connecting...` e não grava | Segure o botão **BOOT** na placa; confira cabo/driver CP2102 ou CH340; no Linux, grupo `dialout`. |
 | Wi-Fi não conecta | SSID/senha em `secrets.h` e **grave de novo**. A rede precisa ser 2,4 GHz (ESP32 clássica). |
-| MQTT / placa offline no dashboard | `MQTT_HOST` tem que ser o IP do PC na LAN, não `localhost`. Mosquitto na porta 1883 (`docker compose up mosquitto`). PC e placa na mesma rede. |
+| MQTT / placa offline no dashboard | `MQTT_HOST` tem que ser o IP do PC na LAN, não `localhost`. O backend Node já escuta MQTT na porta 1883. PC e placa na mesma rede Wi-Fi. Só o dashboard (sem placa) funciona com esse broker local. |
 | Liberar não acende o LED | Backend no ar? Token no dashboard? Gravou o ambiente `esp32doit-mock`? |
 
 Arquivos de configuração (pode editar estes; o pedido deste guia é **não** mudar o restante do firmware):
@@ -108,7 +108,7 @@ LED no GPIO **2**, aceso por **1500** ms.
 
 Monitor serial do computador: **115200**. Firmware marcado como versão `0.1.0` no `platformio.ini`.
 
-O broker de desenvolvimento (`infra/mosquitto`) também está na porta 1883, sem senha. A placa e o Mosquitto precisam se enxergar na rede (o IP `192.168.0.10` só funciona se for realmente o IP do PC/servidor).
+No computador, o MQTT de desenvolvimento sobe **junto com o backend** (`npm run dev:backend`), porta 1883, sem senha. A placa precisa alcançar o **IP do PC** nessa porta. O IP `192.168.0.10` em `secrets.h` só funciona se for realmente o IP atual do PC. Docker/Mosquitto é opcional. Para testar **só o dashboard**, o broker local basta — ESP32 de verdade precisa do IP na LAN.
 
 ## Passos futuros (planejados)
 
@@ -128,7 +128,7 @@ O broker de desenvolvimento (`infra/mosquitto`) também está na porta 1883, sem
 **Trocar o servidor MQTT**
 
 1. Coloque em `MQTT_HOST` o IP **atual** do PC/servidor (não `localhost`).
-2. Mantenha a porta 1883 enquanto o Mosquitto de dev estiver sem TLS.
+2. Mantenha a porta 1883 enquanto o MQTT de desenvolvimento estiver sem TLS.
 3. Grave de novo. Se o dashboard não mostrar a placa, o IP ou o Wi-Fi está errado — não é credencial Stone.
 
 **Adicionar uma máquina**

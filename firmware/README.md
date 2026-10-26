@@ -67,7 +67,7 @@ O `secrets.h` é versionado de propósito (repositório PRIVADO). Nunca torne o 
 ## Gravar na ESP32 (passo a passo)
 
 1. Instale o PlatformIO (`pip install platformio` ou a extensão do VS Code).
-2. Confira o `secrets.h` (acima). O broker MQTT precisa estar acessível pela rede Wi-Fi (veja o README da raiz: `docker compose up`). Use o IP do computador/servidor em `MQTT_HOST`, não `localhost`.
+2. Confira o `secrets.h` (acima). No PC, `npm run dev:backend` já sobe o MQTT na porta 1883 (sem Docker). A placa precisa do **IP do computador na LAN** em `MQTT_HOST`, não `localhost`.
 3. Conecte a ESP32 por USB (se não aparecer, instale o driver CP2102/CH340 e adicione seu usuário ao grupo `dialout` no Linux).
 4. Grave começando pelo mock:
    ```bash

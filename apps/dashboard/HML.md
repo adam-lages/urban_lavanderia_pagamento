@@ -31,23 +31,29 @@ Isto é um site Node/React. Use **npm**, não yarn.
 
 - **Node.js 22** (o README pede 22+; o `Dockerfile` é `node:22-slim`; o CI instala Node 22).
 - **npm** (vem com o Node).
-- O **backend no ar** (API em http://localhost:3000). Sem ele, o login e a tela Máquinas falham. Veja `apps/backend/HML.md`.
+- O **backend no ar** (API Express em http://localhost:3000). Sem ele, o login e a tela Máquinas falham. **Não precisa de Docker.** Veja `apps/backend/HML.md`.
 
 Não instale dependências só dentro de `apps/dashboard/`. Este repo é um **monorepo**: o `npm install` é **na raiz**.
 
-### 1. Instalar (uma vez, ou depois de puxar código novo)
+### Passos para ver o painel + a API (cole no terminal)
 
-Na pasta raiz do repositório (`urban_lavanderia_pagamento`):
+Na pasta raiz do repositório (`urban_lavanderia_pagamento`). **Não precisa de Docker.**
+
+**Uma vez (ou depois de puxar código novo):**
 
 ```bash
 npm install
 ```
 
-Isso instala o dashboard, o backend e os outros pacotes Node juntos.
+**Terminal 1 — servidor Express:**
 
-### 2. Subir o painel
+```bash
+npm run dev:backend
+```
 
-Com o backend já rodando:
+Espere `backend ouvindo na porta 3000`. Teste: http://localhost:3000/health
+
+**Terminal 2 — este painel:**
 
 ```bash
 npm run dev:dashboard
@@ -72,9 +78,9 @@ O dashboard **não** tem `.env` próprio. Quase tudo é padrão no código.
 | Chamadas HTTP | `src/api.ts` | o navegador chama `/api/...`; o Vite tira o `/api` e encaminha para o backend |
 | Token | o que você cola no login | precisa ser o `ADMIN_TOKEN` do backend (`dev-admin-token`) |
 
-No Docker, `API_URL` vira `http://backend:3000`. No computador, se você **não** exportar `API_URL`, o padrão já é localhost — o Vite **não** lê o `.env` da raiz sozinho.
+No Docker (opcional), `API_URL` vira `http://backend:3000`. No computador, se você **não** exportar `API_URL`, o padrão já é localhost — o Vite **não** lê o `.env` da raiz sozinho.
 
-### Outra forma: tudo no Docker
+### Outra forma: tudo no Docker (não precisa)
 
 Na raiz: `docker compose up --build` — dashboard na mesma URL **http://localhost:5173**.
 
@@ -85,7 +91,7 @@ Na raiz: `docker compose up --build` — dashboard na mesma URL **http://localho
 | `npm: command not found` ou Node antigo | Instale Node **22**. Confira com `node -v`. |
 | Erro de workspace / pacote `@lav/dashboard` | Você rodou o comando **fora da raiz**. Suba um nível e use `npm install` + `npm run dev:dashboard`. |
 | Yarn / `yarn.lock` | Não use. Apague qualquer `yarn.lock` acidental. Use `npm install`. |
-| Página abre, mas login ou Máquinas falha | Backend parado ou na porta errada. Suba `npm run dev:backend` (precisa de Postgres + MQTT — veja o guia do backend). Teste http://localhost:3000/health. |
+| Página abre, mas login ou Máquinas falha | Backend parado. No terminal 1: `npm run dev:backend` (só Node; não precisa de Docker). Teste http://localhost:3000/health. |
 | “Não autorizado” | Token diferente do `ADMIN_TOKEN`. Use `dev-admin-token` (ou o valor atual do `.env`) e reinicie o backend se você mudou o token. |
 | Porta 5173 ocupada | Já existe outro Vite. Feche-o ou veja o endereço que o terminal imprimiu. |
 

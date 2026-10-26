@@ -1,6 +1,9 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import pg from "pg";
+import { newDb } from "pg-mem";
+import type { Config } from "./config.js";
 
 export interface Queryable {
   query(text: string, params?: unknown[]): Promise<{ rows: any[]; rowCount: number | null }>;
@@ -44,4 +47,13 @@ export async function migrate(db: Queryable): Promise<void> {
 export function isUniqueViolation(err: unknown): boolean {
   const e = err as { code?: string; message?: string };
   return e?.code === "23505" || /unique|duplicate key/i.test(e?.message ?? "");
+}
+
+/** Postgres de verdade, ou pg-mem (mesmo motor dos testes) quando DATABASE_EMBEDDED=true. */
+export function openDb(config: Config): Db {
+  if (config.embeddedDb) {
+    const mem = newDb().adapters.createPg();
+    return wrapPool(new mem.Pool());
+  }
+  return wrapPool(new pg.Pool({ connectionString: config.databaseUrl }));
 }

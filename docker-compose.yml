@@ -25,6 +25,8 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-lav}:${POSTGRES_PASSWORD:-lav}@postgres:5432/${POSTGRES_DB:-lav}
       MQTT_URL: mqtt://mosquitto:1883
+      DATABASE_EMBEDDED: "false"
+      MQTT_EMBEDDED: "false"
       ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token}
       POS_TOKEN: ${POS_TOKEN:-dev-pos-token}
     ports: ["3000:3000"]

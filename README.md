@@ -6,7 +6,7 @@ simulador de placa ESP32. O plano completo está em [`docs/plano-tecnico.md`](do
 
 ```
 packages/protocol   contrato MQTT (tópicos e mensagens), compartilhado
-apps/backend        API REST (Fastify + Postgres + MQTT)
+apps/backend        API REST (Express; em DEV: banco e MQTT embutidos)
 apps/dashboard      painel web React (Vite + React Router)
 apps/simulator      simulador de ESP32 via MQTT
 infra/mosquitto     config do broker para desenvolvimento
@@ -43,29 +43,41 @@ Textos simples (configuração de hoje + o que vem depois). O app da maquininha 
 
 ## Como rodar
 
-### Opção 1 — Docker (tudo junto)
+**Não precisa de Docker.** Node 22+ e npm bastam.
+
+### Caminho padrão — só Node (Express)
+
+Na raiz, **dois terminais**:
+
+```bash
+npm install
+npm run dev:backend      # API Express em http://localhost:3000  (banco + MQTT sobem sozinhos)
+```
+
+```bash
+npm run dev:dashboard    # painel em http://localhost:5173
+```
+
+Opcional (placas falsas no menu Máquinas):
+
+```bash
+npm run dev:simulator
+```
+
+- Token de admin no login: `dev-admin-token`
+- Teste da API: http://localhost:3000/health
+- Banco de DEV é **em memória** (some ao fechar o terminal). Produção/hml usa Postgres (`DATABASE_EMBEDDED=false`).
+- MQTT de DEV é o **Aedes** dentro do backend (porta 1883). ESP32 de verdade precisa do IP do PC na LAN, não `localhost`.
+
+### Opção extra — Docker (tudo junto)
 
 ```bash
 docker compose up --build
 ```
 
-- Dashboard: http://localhost:5173 (token de admin: `dev-admin-token`)
-- API: http://localhost:3000 (`/health`)
-- O backend cria as tabelas e uma **loja demo** (4 máquinas, placas `esp-m1..esp-m4`); o simulador sobe as 4 placas.
+O compose **desliga** o banco/MQTT embutidos e usa Postgres 16 + Mosquitto.
 
-### Opção 2 — Local (Node 22+)
-
-Precisa de Postgres e de um broker MQTT (o `docker compose up postgres mosquitto` serve).
-
-```bash
-npm install
-npm run dev:backend      # http://localhost:3000   (aplica migrações sozinho)
-npm -w @lav/backend run seed   # opcional: loja demo
-npm run dev:simulator    # sobe esp-m1..esp-m4
-npm run dev:dashboard    # http://localhost:5173
-```
-
-Os valores padrão estão no `.env` da raiz (versionado; o `docker compose` o lê sozinho). Variáveis do backend (`apps/backend/src/config.ts`): `DATABASE_URL`, `MQTT_URL`, `ADMIN_TOKEN`, `POS_TOKEN`,
+Os valores padrão estão no `.env` da raiz. Variáveis do backend (`apps/backend/src/config.ts`): `DATABASE_EMBEDDED`, `MQTT_EMBEDDED`, `DATABASE_URL`, `MQTT_URL`, `ADMIN_TOKEN`, `POS_TOKEN`,
 `COMMAND_TTL_SECONDS` (60), `ACK_TIMEOUT_SECONDS` (60), `REQUIRE_DEVICE_ONLINE` (true), `ENABLE_SIMULATED_PAYMENTS` (true).
 Simulador: `MQTT_URL`, `DEVICE_IDS`, `PULSE_MS`, `DROP_ACKS=true` (não confirma), `FAIL_ALL=true` (rejeita tudo).
 
@@ -135,7 +147,7 @@ POS (`POS_TOKEN`): `GET /pos/stores/:id/config`, `POST /orders`, `GET /orders/:i
 - Sem estorno/cancelamento, reconciliação com a Stone nem webhooks.
 - O mapa canal→ciclo e o protocolo real da ESP32 da Cicclo são desconhecidos; o contrato MQTT é nosso.
 - Relatório agrupa por dia no fuso `America/Sao_Paulo`; migrações são um SQL simples executado na subida.
-- Não testado: `docker compose` (não havia Docker no ambiente de desenvolvimento) e Postgres real (testes usam pg-mem).
+- Não testado: `docker compose` (não havia Docker no ambiente de desenvolvimento). Testes usam pg-mem; o `npm run dev:backend` local também (Postgres de verdade fica para Docker/hml/produção).
 
 ## Dashboard (rotas)
 

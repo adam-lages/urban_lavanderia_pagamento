@@ -7,27 +7,86 @@ Pasta real no repositório: `apps/backend/` (não existe uma pasta `backend/` na
 
 É o “cérebro” no computador: guarda lojas e máquinas, recebe o pedido de pagamento, manda o comando de **liberar** para a placa (ESP32) pelo MQTT (um recado rápido na rede) e registra se deu certo.
 
-Tecnologias de hoje: Node.js, Fastify (API HTTP), Postgres (banco) e um broker MQTT (Mosquitto no Docker).
+Tecnologias de hoje: **Node.js + Express** (API HTTP). No computador, o banco e o MQTT já sobem **dentro do próprio Node**. Em produção/hml o banco é Postgres e o MQTT pode ser Mosquitto (Docker opcional).
 
 O contrato dos recados MQTT (nomes dos tópicos) está em `packages/protocol`. O simulador de placa, para testar sem hardware, está em `apps/simulator`.
 
-## Como rodar no localhost (passos iniciais)
+## Como rodar no localhost (sem Docker)
 
-Isto é um servidor **Node.js**. Use **npm**, não yarn.
+Isto é um servidor **Node.js com Express**. Use **npm**, não yarn. **Não precisa de Docker.**
 
 **Por quê npm?** Na raiz existem `package.json` (workspaces) e `package-lock.json`. O `Dockerfile` roda `npm ci`; o CI instala com npm. **Não há `yarn.lock`.** Fique no npm.
 
 ### O que precisa ter
 
-- **Node.js 22** (README: 22+; imagem Docker `node:22-slim`; CI: Node 22).
+- **Node.js 22** (`node -v` deve começar com `v22`).
 - **npm** (vem com o Node).
-- **Docker** (o jeito mais simples de ter **Postgres 16** na porta **5432** e **Mosquitto** MQTT na porta **1883**). Sem esses dois, o `npm run dev:backend` não sobe: ele precisa do banco e do broker.
 
 Não rode `npm install` só dentro de `apps/backend/`. Sempre na **raiz** do repositório.
 
-### Opção A — Tudo junto (Docker)
+### Passos (cole no terminal, nesta ordem)
 
-Na raiz:
+Na pasta do repositório (`urban_lavanderia_pagamento`):
+
+**Terminal 1 — API (Express)**
+
+```bash
+npm install
+npm run dev:backend
+```
+
+Espere a linha `backend ouvindo na porta 3000`.  
+Teste: abra **http://localhost:3000/health** (deve aparecer `{"ok":true}`).
+
+O comando já:
+
+- cria as tabelas
+- cria a **loja demo** (se o banco estiver vazio)
+- sobe um **banco em memória** (não precisa instalar Postgres)
+- sobe um **broker MQTT** na porta **1883** (não precisa do Mosquitto)
+
+**Terminal 2 — painel**
+
+```bash
+npm run dev:dashboard
+```
+
+Abra **http://localhost:5173**. Na tela Entrar, cole: `dev-admin-token`.
+
+**Terminal 3 (opcional) — placas falsas, para o menu Máquinas ficar Online**
+
+```bash
+npm run dev:simulator
+```
+
+Equivalente do backend: `npm run dev` ou `npm -w @lav/backend run dev`.
+
+### Banco: o que muda entre o computador e a loja de verdade
+
+| Onde | Banco | O que acontece |
+| --- | --- | --- |
+| **Seu computador** (`npm run dev:backend`) | Em memória (pg-mem, o mesmo dos testes) | Sobe sozinho. **Some quando você fecha o terminal.** |
+| **Docker / hml / produção** | Postgres 16 | Dados ficam gravados. `DATABASE_EMBEDDED=false` e `DATABASE_URL` apontando para o Postgres. |
+
+O `docker-compose.yml` continua no repo se alguém quiser usar. **Não é obrigatório.**
+
+Para forçar Postgres de verdade no Node: no `.env` da raiz, `DATABASE_EMBEDDED=false` (e o Postgres precisa estar no ar).
+
+### MQTT: o que muda
+
+| Onde | Broker | Para quê serve |
+| --- | --- | --- |
+| **Seu computador** | Aedes **dentro** do backend, porta **1883** | Dashboard + simulador. Só isso já basta para testar o painel. |
+| **ESP32 de verdade** | Precisa de um broker que a placa alcance no Wi-Fi | Na placa, `MQTT_HOST` = IP do **PC na LAN** (não `localhost`). O backend em Node já escuta 1883 em todas as placas de rede. Firewall do PC precisa deixar a porta 1883. |
+| **Docker / hml** | Mosquitto (opcional) | `MQTT_EMBEDDED=false` e `MQTT_URL=mqtt://…`. |
+
+Se quiser o broker **num terminal separado** (e desligar o embutido com `MQTT_EMBEDDED=false`):
+
+```bash
+npm run dev:mqtt
+```
+
+### Opção extra — tudo no Docker (não precisa)
 
 ```bash
 docker compose up --build
@@ -35,58 +94,26 @@ docker compose up --build
 
 | Serviço | Endereço |
 | --- | --- |
-| API (backend) | **http://localhost:3000** (teste: `/health`) |
+| API (Express) | **http://localhost:3000** (`/health`) |
 | Dashboard | http://localhost:5173 |
-| Postgres | porta **5432** (usuário/senha/banco: `lav` / `lav` / `lav`) |
-| MQTT (Mosquitto) | porta **1883** (sem login no modo de desenvolvimento) |
-
-O backend aplica as tabelas sozinho e, se o banco estiver vazio, cria a **loja demo**.
-
-### Opção B — Backend no Node (Postgres e MQTT no Docker)
-
-1. Suba só o banco e o broker:
-
-```bash
-docker compose up postgres mosquitto
-```
-
-2. Instale (uma vez, na raiz):
-
-```bash
-npm install
-```
-
-3. Suba a API:
-
-```bash
-npm run dev:backend
-```
-
-Equivalente: `npm -w @lav/backend run dev`. A API escuta em **http://localhost:3000**.
-
-4. (Opcional) Loja demo, se o banco já tinha dados vazios sem seed:
-
-```bash
-npm -w @lav/backend run seed
-```
+| Postgres | porta **5432** (`lav` / `lav` / `lav`) |
+| MQTT (Mosquitto) | porta **1883** |
 
 ### Variáveis
 
-O backend lê `process.env`. **Não há `dotenv` no código**: se você não exportar nada, valem os padrões de `src/config.ts` (iguais ao `.env` da raiz). O `docker compose` **lê** o `.env` sozinho.
+O backend lê o `.env` da **raiz** e também `process.env`. Se não houver arquivo, valem os padrões de `src/config.ts` (modo embutido ligado).
 
-As principais no localhost:
-
-| Variável | Padrão | Para quê |
+| Variável | Padrão no computador | Para quê |
 | --- | --- | --- |
 | `PORT` | `3000` | porta HTTP da API |
-| `DATABASE_URL` | `postgres://lav:lav@localhost:5432/lav` | Postgres |
-| `MQTT_URL` | `mqtt://localhost:1883` | broker |
+| `DATABASE_EMBEDDED` | `true` | banco em memória (desligue na produção) |
+| `DATABASE_URL` | `postgres://lav:lav@localhost:5432/lav` | só usado se o embutido estiver `false` |
+| `MQTT_EMBEDDED` | `true` | broker Aedes no próprio processo |
+| `MQTT_URL` | `mqtt://localhost:1883` | só usado se o embutido estiver `false` |
 | `ADMIN_TOKEN` | `dev-admin-token` | painel e rotas de admin |
 | `POS_TOKEN` | `dev-pos-token` | rotas da maquininha (teste) |
 
-Lista completa na seção abaixo.
-
-Para testar a placa **sem hardware**, depois do backend: `npm run dev:simulator` (precisa do Mosquitto).
+Para testar a placa **sem hardware**, depois do backend: `npm run dev:simulator`.
 
 ### Deu errado?
 
@@ -95,19 +122,20 @@ Para testar a placa **sem hardware**, depois do backend: `npm run dev:simulator`
 | Node / npm não encontrado | Instale Node **22**. `node -v` deve começar com `v22`. |
 | Erro de workspace `@lav/backend` | Comando fora da raiz. Volte para a pasta do `package-lock.json`. |
 | Yarn | Não use. Este repo trava no npm. |
-| `ECONNREFUSED` no Postgres (`5432`) | Postgres não está no ar. `docker compose up postgres`. |
-| Falha ao conectar MQTT (`1883`) | Mosquitto parado. `docker compose up mosquitto`. |
-| Porta 3000 ocupada | Outro backend já está rodando (talvez o Docker). Pare um dos dois. |
-| `/health` não responde | Espere o migrate terminar; leia o log `backend ouvindo na porta 3000`. |
-| Dashboard “Não autorizado” | Token do navegador ≠ `ADMIN_TOKEN`. Reinicie o backend depois de mudar o `.env`. |
+| Porta 3000 ocupada | Outro backend já está rodando. Pare um dos dois. |
+| Porta 1883 ocupada | Outro MQTT (Mosquitto/Docker) no ar. Feche-o, ou use `MQTT_PORT=1884`. |
+| `/health` não responde | Espere o log `backend ouvindo na porta 3000`. |
+| Dashboard “Não autorizado” | Token do navegador ≠ `ADMIN_TOKEN`. Use `dev-admin-token`. |
+| Loja demo sumiu | Banco em memória: fecheu o terminal, os dados foram embora. Suba de novo (o seed roda sozinho). |
 
 ## Onde mexer no código
 
 Arquivos mais comuns:
 
 - `src/config.ts` — lê as variáveis de ambiente
-- `src/app.ts` — rotas da API
-- `src/seed.ts` — loja demo
+- `src/app.ts` — rotas Express
+- `src/server.ts` — sobe HTTP + banco + MQTT
+- `src/demo-seed.ts` — loja demo
 - `src/payments/` — como o pagamento é interpretado (`simulated` e `stone_deeplink`)
 - `src/migrations/` — SQL das tabelas
 
@@ -121,12 +149,14 @@ Valores **atuais** do `.env`:
 
 | Variável | Significado | Valor atual |
 | --- | --- | --- |
-| `POSTGRES_USER` | usuário do banco | `lav` |
-| `POSTGRES_PASSWORD` | senha do banco | `lav` |
+| `POSTGRES_USER` | usuário do Postgres (Docker/produção) | `lav` |
+| `POSTGRES_PASSWORD` | senha do Postgres | `lav` |
 | `POSTGRES_DB` | nome do banco | `lav` |
-| `DATABASE_URL` | endereço completo do Postgres | `postgres://lav:lav@localhost:5432/lav` |
-| `MQTT_URL` | endereço do broker | `mqtt://localhost:1883` |
-| `MQTT_USERNAME` | usuário MQTT | vazio (sem senha no Mosquitto de dev) |
+| `DATABASE_EMBEDDED` | banco em memória no Node | `true` |
+| `DATABASE_URL` | endereço do Postgres (se o embutido estiver off) | `postgres://lav:lav@localhost:5432/lav` |
+| `MQTT_EMBEDDED` | broker no próprio backend | `true` |
+| `MQTT_URL` | endereço do broker (se o embutido estiver off) | `mqtt://localhost:1883` |
+| `MQTT_USERNAME` | usuário MQTT | vazio |
 | `MQTT_PASSWORD` | senha MQTT | vazio |
 | `ADMIN_TOKEN` | senha-única do painel e das rotas de admin | `dev-admin-token` |
 | `POS_TOKEN` | senha-única das rotas da maquininha | `dev-pos-token` |
@@ -138,7 +168,7 @@ Valores **atuais** do `.env`:
 | `DEVICE_IDS` | placas do **simulador** (não do backend) | `esp-m1,esp-m2,esp-m3,esp-m4` |
 | `API_URL` | usada pelo **dashboard** | `http://localhost:3000` |
 
-Mosquitto de desenvolvimento (`infra/mosquitto/mosquitto.conf`): porta **1883**, **sem** login e **sem** TLS (`allow_anonymous true`). Isso **não** serve para internet aberta.
+Mosquitto de desenvolvimento (`infra/mosquitto/mosquitto.conf`): porta **1883**, **sem** login e **sem** TLS. Só se você escolher Docker. Isso **não** serve para internet aberta.
 
 Rotas úteis:
 
@@ -163,7 +193,7 @@ Simulador (opcional, `apps/simulator`): `MQTT_URL`, `DEVICE_IDS`, `PULSE_MS` (pa
 **Trocar os tokens**
 
 1. Edite `ADMIN_TOKEN` e/ou `POS_TOKEN` no `.env`.
-2. Reinicie o backend.
+2. Reinicie o backend (`Ctrl+C` e `npm run dev:backend` de novo).
 3. Atualize o token no dashboard e em qualquer `curl` de teste.
 4. Confira: `curl -s localhost:3000/health` e uma chamada com o token novo (ex.: `GET /stores`).
 
