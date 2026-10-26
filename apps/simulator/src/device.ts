@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import mqtt, { type MqttClient } from "mqtt";
-import { topics, type AckMessage, type ReleaseCommandMessage } from "@lav/protocol";
+import { topics, type AckMessage, type DeviceInfoMessage, type ReleaseCommandMessage } from "@lav/protocol";
 
 export interface DeviceOptions {
   url: string;
@@ -13,6 +13,8 @@ export interface DeviceOptions {
   dropAcks?: boolean;
   /** Se true, rejeita todo comando (testa FAILED). */
   failAll?: boolean;
+  /** Intervalo do heartbeat em tópico `info` (ms). 0 desliga. Padrão: 30000. */
+  infoIntervalMs?: number;
   /** Arquivo para persistir commandIds executados (simula memória não volátil). */
   statePath?: string;
   log?: (msg: string) => void;
@@ -24,6 +26,8 @@ export class DeviceSimulator {
   readonly pulses: Array<{ commandId: string; channel: number; at: Date }> = [];
   private executed = new Set<string>();
   private client?: MqttClient;
+  private infoTimer?: NodeJS.Timeout;
+  private startedAt = Date.now();
   private log: (m: string) => void;
 
   constructor(private opts: DeviceOptions) {
@@ -52,8 +56,14 @@ export class DeviceSimulator {
     client.on("connect", () => {
       client.subscribe(topics.cmd(deviceId), { qos: 1 });
       client.publish(topics.status(deviceId), "online", { qos: 1, retain: true });
+      this.publishInfo();
       this.log(`[${deviceId}] online`);
     });
+    const every = this.opts.infoIntervalMs ?? 30_000;
+    if (every > 0) {
+      this.infoTimer = setInterval(() => this.publishInfo(), every);
+      this.infoTimer.unref();
+    }
     await new Promise<void>((resolve, reject) => {
       client.once("connect", () => resolve());
       client.once("error", reject);
@@ -88,6 +98,17 @@ export class DeviceSimulator {
     this.ack({ commandId: cmd.commandId, status: "done" });
   }
 
+  private publishInfo() {
+    const info: DeviceInfoMessage = {
+      fw: "simulator",
+      ip: "127.0.0.1",
+      rssi: -55,
+      uptimeS: Math.floor((Date.now() - this.startedAt) / 1000),
+      driver: "sim",
+    };
+    this.client?.publish(topics.info(this.deviceId), JSON.stringify(info), { qos: 0 });
+  }
+
   private ack(msg: AckMessage) {
     if (this.opts.dropAcks) return;
     this.client?.publish(topics.ack(this.deviceId), JSON.stringify(msg), { qos: 1 });
@@ -95,6 +116,7 @@ export class DeviceSimulator {
 
   /** Desliga de forma limpa e publica offline. */
   async stop(): Promise<void> {
+    clearInterval(this.infoTimer);
     if (!this.client) return;
     await new Promise<void>((resolve) =>
       this.client!.publish(topics.status(this.deviceId), "offline", { qos: 1, retain: true }, () => resolve()),
@@ -104,6 +126,7 @@ export class DeviceSimulator {
 
   /** Simula queda de energia/Wi-Fi: corta sem enviar offline (o broker dispara o LWT). */
   async crash(): Promise<void> {
+    clearInterval(this.infoTimer);
     await this.client?.endAsync(true);
   }
 }

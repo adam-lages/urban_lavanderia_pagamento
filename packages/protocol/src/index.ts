@@ -10,7 +10,14 @@ export const topics = {
   ack: (deviceId: string) => `lav/${deviceId}/ack`,
   /** placa -> backend, retained; "online"/"offline" (offline via LWT) */
   status: (deviceId: string) => `lav/${deviceId}/status`,
+  /** placa -> backend, heartbeat periódico (JSON `DeviceInfoMessage`) */
+  info: (deviceId: string) => `lav/${deviceId}/info`,
+  /** placa -> debug: quadros RX da serial da máquina em hex (JSON {t,n,hex}); só driver serial */
+  debugRx: (deviceId: string) => `lav/${deviceId}/debug/rx`,
+  /** debug -> placa: {"hex":"AA BB","confirm":"SEND"}; ignorado, a menos que o firmware tenha SERIAL_DEBUG_TX=1 */
+  debugCmd: (deviceId: string) => `lav/${deviceId}/debug/cmd`,
   ackWildcard: "lav/+/ack",
+  infoWildcard: "lav/+/info",
   statusWildcard: "lav/+/status",
 } as const;
 
@@ -28,6 +35,18 @@ export interface AckMessage {
   status: AckStatus;
   reason?: string;
 }
+
+export interface DeviceInfoMessage {
+  fw?: string;
+  ip?: string;
+  rssi?: number;
+  uptimeS?: number;
+  driver?: string;
+  freeHeap?: number;
+}
+
+/** Canal usado em liberações manuais pelo dashboard (placa dedicada a uma máquina). */
+export const MANUAL_CHANNEL = 100;
 
 export type PresenceStatus = "online" | "offline";
 

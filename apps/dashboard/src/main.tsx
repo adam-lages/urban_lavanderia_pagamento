@@ -1,12 +1,13 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { getToken, setToken } from "./api";
+import { Boards } from "./pages/Boards";
 import { Config } from "./pages/Config";
 import { Releases } from "./pages/Releases";
 import { Sales } from "./pages/Sales";
 import "./styles.css";
 
-type Tab = "sales" | "releases" | "config";
+type Tab = "sales" | "boards" | "releases" | "config";
 
 function Login({ onDone }: { onDone: () => void }) {
   const [value, setValue] = useState("");
@@ -23,7 +24,7 @@ function App() {
   const [authed, setAuthed] = useState(!!getToken());
   const [tab, setTab] = useState<Tab>("sales");
   if (!authed) return <Login onDone={() => setAuthed(true)} />;
-  const tabs: Array<[Tab, string]> = [["sales", "Vendas"], ["releases", "Liberações"], ["config", "Configuração"]];
+  const tabs: Array<[Tab, string]> = [["sales", "Vendas"], ["boards", "Máquinas"], ["releases", "Liberações"], ["config", "Configuração"]];
   return (
     <>
       <header>
@@ -37,6 +38,7 @@ function App() {
       </header>
       <main>
         {tab === "sales" && <Sales />}
+        {tab === "boards" && <Boards />}
         {tab === "releases" && <Releases />}
         {tab === "config" && <Config />}
       </main>

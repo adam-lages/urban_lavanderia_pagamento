@@ -10,6 +10,7 @@ import type { DeviceGateway } from "./gateway.js";
 import { PaymentProviderRegistry } from "./payments/provider.js";
 import { SimulatedProvider } from "./payments/simulated.js";
 import { StoneDeeplinkProvider } from "./payments/stone-deeplink.js";
+import { BoardService } from "./services/boards.js";
 import { OrderService } from "./services/orders.js";
 import { ReleaseService, mapCommand } from "./services/releases.js";
 
@@ -53,8 +54,15 @@ export async function buildApp({ db, gateway, config, now }: AppDeps) {
   const releases = new ReleaseService(db, gateway, config, now);
   const orders = new OrderService(db, gateway, releases, providers, config, now);
 
-  gateway.onAck((deviceId, ack) => void releases.handleAck(deviceId, ack).catch(() => undefined));
+  const boards = new BoardService(db, gateway, releases, config, now);
+
+  gateway.onAck((deviceId, ack) => {
+    void boards.touch(deviceId).catch(() => undefined);
+    void releases.handleAck(deviceId, ack).catch(() => undefined);
+  });
+  gateway.onInfo((deviceId, info) => void boards.touch(deviceId, info).catch(() => undefined));
   gateway.onPresence((deviceId, status) => {
+    void boards.touch(deviceId).catch(() => undefined);
     if (status === "online") void releases.dispatchPendingForDevice(deviceId).catch(() => undefined);
   });
 
@@ -233,7 +241,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps) {
       .object({ status: z.string().optional(), storeId: z.string().optional(), limit: z.coerce.number().int().min(1).max(500).default(100) })
       .parse(req.query);
     const { rows } = await db.query(
-      "SELECT c.*, m.label AS machine_label, s.name AS store_name FROM release_commands c JOIN machines m ON m.id = c.machine_id JOIN stores s ON s.id = c.store_id ORDER BY c.created_at DESC",
+      "SELECT c.*, m.label AS machine_label, s.name AS store_name FROM release_commands c LEFT JOIN machines m ON m.id = c.machine_id LEFT JOIN stores s ON s.id = c.store_id ORDER BY c.created_at DESC",
     );
     return rows
       .filter((r) => (!q.status || r.status === q.status) && (!q.storeId || r.store_id === q.storeId))
@@ -252,6 +260,19 @@ export async function buildApp({ db, gateway, config, now }: AppDeps) {
     await releases.retry(id);
     const c = (await db.query("SELECT * FROM release_commands WHERE id = $1", [id])).rows[0];
     return mapCommand(c);
+  });
+  /* ---------- Admin: placas ESP32 (menu "Máquinas") ---------- */
+  app.get("/boards", { preHandler: requireAdmin }, async () => boards.list());
+  app.patch("/boards/:deviceId", { preHandler: requireAdmin }, async (req) => {
+    const { deviceId } = req.params as { deviceId: string };
+    const b = z.object({ name: z.string().trim().min(1).max(80).optional(), storeId: z.string().optional(), kind: kind.optional() }).parse(req.body);
+    return boards.update(deviceId, b);
+  });
+  app.post("/boards/:deviceId/release", { preHandler: requireAdmin }, async (req, reply) => {
+    const { deviceId } = req.params as { deviceId: string };
+    const id = await boards.release(deviceId);
+    const c = (await db.query("SELECT * FROM release_commands WHERE id = $1", [id])).rows[0];
+    return reply.status(202).send(mapCommand(c));
   });
   app.get("/devices", { preHandler: requireAdmin }, async () => {
     const { rows } = await db.query("SELECT DISTINCT device_id FROM machines");

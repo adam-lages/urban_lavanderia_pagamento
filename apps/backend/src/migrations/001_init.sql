@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE TABLE IF NOT EXISTS release_commands (
   id text PRIMARY KEY,
-  order_item_id text NOT NULL UNIQUE REFERENCES order_items(id),
+  order_item_id text UNIQUE,
   order_id text NOT NULL REFERENCES orders(id),
   store_id text NOT NULL REFERENCES stores(id),
   machine_id text NOT NULL REFERENCES machines(id),

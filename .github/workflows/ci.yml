@@ -11,3 +11,15 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build:dashboard
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install platformio
+      - run: cp firmware/include/secrets.example.h firmware/include/secrets.h
+      - run: pio test -e native
+        working-directory: firmware
+      - run: pio run -e esp32doit-mock -e esp32doit-gpio -e esp32doit-serial
+        working-directory: firmware

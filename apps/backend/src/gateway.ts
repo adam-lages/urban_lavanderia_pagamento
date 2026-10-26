@@ -3,6 +3,7 @@ import {
   topics,
   deviceIdFromTopic,
   type AckMessage,
+  type DeviceInfoMessage,
   type PresenceStatus,
   type ReleaseCommandMessage,
 } from "@lav/protocol";
@@ -12,6 +13,8 @@ export interface DeviceGateway {
   isOnline(deviceId: string): boolean;
   onAck(handler: (deviceId: string, ack: AckMessage) => void): void;
   onPresence(handler: (deviceId: string, status: PresenceStatus) => void): void;
+  /** Heartbeat periódico com informações da placa. */
+  onInfo(handler: (deviceId: string, info: DeviceInfoMessage) => void): void;
   close(): Promise<void>;
 }
 
@@ -19,6 +22,7 @@ export class MqttGateway implements DeviceGateway {
   private presence = new Map<string, PresenceStatus>();
   private ackHandlers: Array<(d: string, a: AckMessage) => void> = [];
   private presenceHandlers: Array<(d: string, s: PresenceStatus) => void> = [];
+  private infoHandlers: Array<(d: string, i: DeviceInfoMessage) => void> = [];
 
   private constructor(private client: MqttClient) {}
 
@@ -36,9 +40,9 @@ export class MqttGateway implements DeviceGateway {
       client.once("error", reject);
     });
     client.on("connect", () => {
-      client.subscribe([topics.ackWildcard, topics.statusWildcard], { qos: 1 });
+      client.subscribe([topics.ackWildcard, topics.statusWildcard, topics.infoWildcard], { qos: 1 });
     });
-    client.subscribe([topics.ackWildcard, topics.statusWildcard], { qos: 1 });
+    client.subscribe([topics.ackWildcard, topics.statusWildcard, topics.infoWildcard], { qos: 1 });
     client.on("message", (topic, payload) => gw.handle(topic, payload.toString()));
     return gw;
   }
@@ -50,6 +54,13 @@ export class MqttGateway implements DeviceGateway {
       const status: PresenceStatus = payload.trim() === "online" ? "online" : "offline";
       this.presence.set(deviceId, status);
       this.presenceHandlers.forEach((h) => h(deviceId, status));
+    } else if (topic.endsWith("/info")) {
+      try {
+        const info = JSON.parse(payload) as DeviceInfoMessage;
+        if (info && typeof info === "object") this.infoHandlers.forEach((h) => h(deviceId, info));
+      } catch {
+        /* payload inválido é ignorado */
+      }
     } else if (topic.endsWith("/ack")) {
       try {
         const ack = JSON.parse(payload) as AckMessage;
@@ -75,6 +86,9 @@ export class MqttGateway implements DeviceGateway {
   }
   onPresence(h: (d: string, s: PresenceStatus) => void) {
     this.presenceHandlers.push(h);
+  }
+  onInfo(h: (d: string, i: DeviceInfoMessage) => void) {
+    this.infoHandlers.push(h);
   }
   async close() {
     await this.client.endAsync();

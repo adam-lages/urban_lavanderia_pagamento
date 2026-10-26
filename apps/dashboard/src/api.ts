@@ -27,3 +27,10 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 
 export const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 export const kindLabel = (k: Kind) => (k === "WASHER" ? "Lava" : "Seca");
+
+export interface BoardInfo { fw?: string; ip?: string; rssi?: number; uptimeS?: number; driver?: string; freeHeap?: number }
+export interface Board {
+  deviceId: string; name: string | null; storeId: string | null; storeName: string | null; kind: Kind | null;
+  registered: boolean; online: boolean; firstSeenAt: string; lastSeenAt: string | null; info: BoardInfo | null;
+  lastCommand: { id: string; status: string; issuedAt: string; doneAt: string | null } | null;
+}

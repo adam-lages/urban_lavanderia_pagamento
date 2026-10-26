@@ -106,3 +106,9 @@ POS (`POS_TOKEN`): `GET /pos/stores/:id/config`, `POST /orders`, `GET /orders/:i
 - O mapa canal→ciclo e o protocolo real da ESP32 da Cicclo são desconhecidos; o contrato MQTT é nosso.
 - Relatório agrupa por dia no fuso `America/Sao_Paulo`; migrações são um SQL simples executado na subida.
 - Não testado: `docker compose` (não havia Docker no ambiente de desenvolvimento) e Postgres real (testes usam pg-mem).
+
+## Firmware ESP32 e menu "Máquinas"
+
+- Firmware (PlatformIO) em [`firmware/`](firmware/README.md): Wi-Fi, MQTT, drivers de liberação (mock, GPIO, serial sniffer).
+- Dashboard, aba **Máquinas**: lista as placas (online/offline, visto por último), cadastro (nome, loja, tipo) e botão **Liberar máquina**.
+- API: `GET /boards`, `PATCH /boards/:deviceId`, `POST /boards/:deviceId/release` (token de admin).
