@@ -96,6 +96,6 @@ Só então pense em ligar algo na máquina, com:
 
 - medição de tensão **antes** de conectar;
 - optoacoplador (nunca 220 V no pino da ESP32);
-- leitura de [`docs/analise-placa-e-protocolo.md`](../docs/analise-placa-e-protocolo.md).
+- leitura de [`docs/analise-placa-e-protocolo.md`](../docs/analise-placa-e-protocolo.md) — a máquina está em **vend 100** (`r9Pr` / ALL). A ESP32 deve **emular cartão/moeda nesse conector**, não um protocolo Cicclo. Ainda **não sabemos** se o sinal é serial ou pulso; não grave um “liberador serial” até medir.
 
 Até lá, deixe a ESP32 só no USB e no Wi-Fi.

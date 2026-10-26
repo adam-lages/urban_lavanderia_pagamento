@@ -5,6 +5,7 @@
 
 namespace lav {
 
+/* Preço de vend da LG (r9Pr), passos de 100. Não é protocolo Cicclo. */
 constexpr int kMinChannel = 100;
 constexpr int kMaxChannel = 1000;
 constexpr size_t kIdCap = 40;  // UUID (36) + '\0'

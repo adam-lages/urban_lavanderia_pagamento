@@ -13,7 +13,7 @@ Hoje existem três “modos” (drivers), escolhidos na hora de gravar:
 | --- | --- |
 | `esp32doit-mock` | Só acende o **LED** da placa (~1,5 s). Comece sempre por aqui. |
 | `esp32doit-gpio` | Pulso num pino (padrão GPIO 26) para optoacoplador/relé — **não** ligue 220 V na ESP32 |
-| `esp32doit-serial` | Só **escuta** a serial da máquina (sniffer). Ainda **não** libera, porque o protocolo LG/Cicclo é desconhecido |
+| `esp32doit-serial` | Só **escuta** a serial no conector da LG (sniffer). Ainda **não** libera: não conhecemos os bytes do leitor de cartão. O “canal 100” é o **preço `r9Pr` da máquina**, não um protocolo da Cicclo |
 
 O ID da placa é `esp-` + o MAC (aparece no monitor serial). Tópicos MQTT: `lav/<id>/cmd`, `ack`, `status`, `info`.
 
@@ -110,11 +110,19 @@ Monitor serial do computador: **115200**. Firmware marcado como versão `0.1.0` 
 
 No computador, o MQTT de desenvolvimento sobe **junto com o backend** (`npm run dev:backend`), porta 1883, sem senha. A placa precisa alcançar o **IP do PC** nessa porta. O IP `192.168.0.10` em `secrets.h` só funciona se for realmente o IP atual do PC. Docker/Mosquitto é opcional. Para testar **só o dashboard**, o broker local basta — ESP32 de verdade precisa do IP na LAN.
 
+## O que a máquina espera (programação do dono)
+
+No painel LG o dono faz **SETUP → R9PR (`r9Pr`) → ALL → 100** (desce de 1000 de 100 em 100). Isso é o **preço de vend** de todos os ciclos, documentado pela LG. Cicclo / VMPay / Nayax só pedem que a máquina fique nesse preço.
+
+A ESP32, quando for ligar na máquina, precisa **emular o pagamento no conector LG** (leitor de cartão no ESDUS e/ou pulso de moeda) até a máquina ver crédito **≥ 100**. Não é “falar com a Cicclo”.
+
+**Ainda não medimos o fio:** pode ser serial (RX/TX no ESDUS) ou pulso de moeda. Sem essa medição, o modo serial **só escuta**; o modo GPIO é palpite de pulso/Start. Detalhe em `docs/analise-placa-e-protocolo.md` (seção 9).
+
 ## Passos futuros (planejados)
 
 - MQTT com TLS (`MQTT_USE_TLS 1`, certificado `MQTT_CA_CERT`, em geral porta 8883) e usuário/senha por placa
-- Descobrir o **protocolo serial** da máquina (hoje o sniffer só publica hex em `lav/<id>/debug/rx`; o envio de liberação é um esboço)
-- Só então um driver serial que **libere** o ciclo, com isolamento de tensão (3,3 V da ESP32 ≠ 5 V / 12 V / RS-485 da máquina)
+- **Medir** se o conector é UART ou pulso. O sniffer só publica hex em `lav/<id>/debug/rx`. **Não inventar quadro serial.**
+- Só então um driver que **credite 100** (leitor virtual ou pulsos), com isolamento de tensão (3,3 V da ESP32 ≠ 5 V / 12 V / RS-485 da máquina)
 - Relógio e rede estáveis nas lojas reais (NTP já é exigido para aceitar comando)
 
 ## Como fazer uma mudança pequena com segurança

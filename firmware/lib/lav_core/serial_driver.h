@@ -18,14 +18,18 @@ class SerialTransport {
 };
 
 /**
- * Driver serial da máquina LG.
+ * Driver serial da máquina LG (conector ESDUS / leitor de cartão).
  *
- * ESTADO ATUAL: protocolo DESCONHECIDO. O driver
+ * A máquina cobra o preço de vend r9Pr (hoje ALL = 100). Cicclo/VMPay/Nayax
+ * só creditam esse valor; não existe “protocolo Cicclo” neste fio.
+ *
+ * ESTADO ATUAL: bytes DESCONHECIDOS (UART vs pulso ainda não medido). O driver
  *  - escuta a serial (SNIFFER) e entrega cada quadro RX em hexadecimal ao `RxSink`;
  *  - NÃO libera máquina: start() sempre recusa com "serial_protocol_unknown".
  *
- * Quando o protocolo for descoberto, implemente buildReleaseFrame() (abaixo)
+ * Quando a captura mostrar o crédito de 100, implemente buildReleaseFrame()
  * e troque start() para enviar o quadro; o restante do firmware não muda.
+ * Não inventar frames.
  */
 class SerialDriver : public ReleaseDriver {
  public:
@@ -52,8 +56,7 @@ class SerialDriver : public ReleaseDriver {
   uint32_t rxBytes() const { return rxBytes_; }
 
   /**
-   * STUB do futuro driver. Monte em `out` o quadro que libera a máquina para `channel`.
-   * Retorna o tamanho, ou 0 se o protocolo ainda não é conhecido.
+   * STUB. `channel` = preço r9Pr (100, 200, … 1000). Sem captura, retorna 0.
    */
   static size_t buildReleaseFrame(int channel, uint8_t* out, size_t cap);
 

@@ -4,8 +4,10 @@
 #include "release_driver.h"
 
 /**
- * Pulso em um GPIO (via optoacoplador/relé) simulando o botão Start ou um pulso de moeda.
- * Nível ativo e duração configuráveis em platformio.ini (GPIO_ACTIVE_LEVEL, GPIO_PULSE_MS).
+ * Pulso em um GPIO (via optoacoplador/relé): botão Start (OPL) ou pulso de moeda.
+ * Se for moeda, um pulso só libera se Co1 e r9Pr da LG baterem (hoje r9Pr ALL = 100).
+ * Ainda não medido se esta loja usa moeda ou serial de cartão.
+ * Nível ativo e duração: platformio.ini (GPIO_ACTIVE_LEVEL, GPIO_PULSE_MS).
  * O pino fica inativo no boot, entre pulsos e ao reiniciar.
  */
 class GpioPulseDriver : public lav::ReleaseDriver {

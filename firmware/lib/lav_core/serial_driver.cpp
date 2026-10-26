@@ -2,6 +2,7 @@
 
 namespace lav {
 
+/* Sem captura: não há quadro. channel seria o r9Pr (100…). */
 size_t SerialDriver::buildReleaseFrame(int, uint8_t*, size_t) { return 0; }
 
 bool SerialDriver::start(int channel, const char** reason) {

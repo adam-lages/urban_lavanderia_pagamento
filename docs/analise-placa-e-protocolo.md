@@ -5,8 +5,8 @@ cursor:
 
 # Análise da placa LG e do protocolo de liberação das máquinas
 
-Data: 26/10/2026. Complementa `plano-tecnico.md` (seção 2.3 e risco "protocolo da Cicclo desconhecido").
-Legenda: **[Confirmado]** = visto em foto ou fonte oficial. **[Hipótese]** = dedução razoável, não provada. **[Medir]** = só uma medição resolve.
+Data: 26/10/2026. Complementa `plano-tecnico.md` (seção 2.3). Atualizado no mesmo dia com a programação **r9Pr** do painel LG (seção 9).
+Legenda: **[Confirmado]** = visto em foto, painel do dono ou fonte oficial. **[Hipótese]** = dedução razoável, não provada. **[Medir]** = só uma medição resolve.
 
 ## 0. Resumo em 8 linhas
 
@@ -16,8 +16,8 @@ Legenda: **[Confirmado]** = visto em foto ou fonte oficial. **[Hipótese]** = de
 4. O rótulo `ESDUS_OUT_PIN2` / `ESDUS_IN_PIN1` combina com o leitor de cartão **ESD** (marca citada pela LG e pela Greenwald). **[Hipótese forte]**
 5. **O protocolo serial (velocidade, formato, comandos) não é público.** Não achei documento da LG nem da ESD. **[Não encontrado]**
 6. Existe prova de que terceiros conseguem entrar nessa serial: o **Greenwald Pay Plus** fica "no meio" entre a placa e o leitor ESD e libera máquina por celular. **[Confirmado]** (instalação Greenwald)
-7. Os "canais 100 a 1000" **não aparecem em nenhuma fonte pública que achei**. Provavelmente é termo da Cicclo (ou valor de crédito). **[Não confirmado]**
-8. Caminho recomendado: **medir primeiro** (seção 5). Plano B seguro e simples: **simular o botão Start** com relé/optoacoplador (seção 6).
+7. O “canal 100 a 1000” **não é protocolo da Cicclo**. No display de 4 dígitos, **R9PR = `r9Pr` = Regular Price** (preço de *vend*). O dono programa **SETUP → r9Pr → ALL → 100** (passos de 100). Cicclo, VMPay e Nayax só precisam **acertar esse preço na máquina**. **[Confirmado]** (dono + Master Book LG)
+8. A ESP32 precisa **fingir o pagamento no conector da LG** (leitor de cartão e/ou pulso de moeda) até a máquina ver crédito **≥ 100**. **Ainda não sabemos se o fio é serial ou pulso.** **[Medir]** Plano B: botão Start (seção 6).
 
 ---
 
@@ -59,10 +59,10 @@ Fotos: `docs/fotos-placa/` (8 imagens, já renomeadas). Nos nomes abaixo, o cód
 |---|---|---|
 | LG EBR8344SY / EAX61543618 | Placa de **painel + controle** (display, botões, lógica do ciclo). É a placa "mestre" do ciclo. | Alta |
 | Módulo EBR44895802 / ML-48BK1510 | **Módulo Wi-Fi/Bluetooth da LG** (serviço LG Smart Solution / Laundry Lounge). Aparece no manual: LED de Wi-Fi no painel. | Alta |
-| "cicclo LAVADORA" | Dispositivo/interface da Cicclo ligado a um conector da placa. Pode ser (a) emulação do leitor de cartão ESD na serial, ou (b) outro meio. Não sei qual. | Média-baixa |
+| "cicclo LAVADORA" | Interface de pagamento de terceiro. **Não inventa o “canal 100”**: esse número é o preço `r9Pr` da LG. O aparelho (Cicclo / VMPay / Nayax) só credita esse valor no conector de pagamento. | Média |
 | ESDUS_IN / ESDUS_OUT | Entradas/saídas do **barramento do leitor de cartão ESD (versão US)**. | Média-alta |
 
-Nota: a Cicclo não é citada no manual da LG. Se ela usa a serial do leitor de cartão, então ela "finge ser" um leitor de cartão e manda crédito. **[Hipótese]**
+Nota: a Cicclo **não** aparece no manual da LG. O caminho certo da ESP32 é o mesmo dos leitores de cartão/moeda da LG: **emular vend/card no conector**, não “falar o protocolo Cicclo”. **[Confirmado no sentido de programação; o fio elétrico ainda [Medir]]**
 
 ---
 
@@ -74,17 +74,18 @@ Nota: a Cicclo não é citada no manual da LG. Se ela usa a serial do leitor de 
 - **Manual do dono (washer MFL71671218, modelos CWG27MDQRS/MDORS/MSORS/MSQRS/MDCRS/MSCRS)**: o MDCRS/MSCRS é "**Card/OPL type**". https://cdn.document360.io/3ba378f5-49bb-4d12-b998-373ae9b22725/Images/Documentation/Attachment%201.pdf
 - **Modos de pagamento (manual)**: "PAY" (moeda/cartão) ou "FrEE" (OPL, uso interno sem pagamento). Em OPL a máquina mostra "PUSH" e o ciclo é iniciado pelos botões. Há configuração de **tipo de leitor de cartão** (0 = Greenwald, 1 = ESD) e de **pulso de moeda** (0 = 50 ms para ESD/Greenwald/Munzprufer, 1 = 100 ms Coreia) no manual do secador.
 - **Modo de programação (senha padrão 3000)**: com cartão de serviço, ou botões 1º+3º ao mesmo tempo; 2º+3º alternam números; 4º avança; Start confirma. Permite preço, tipo de produto, tipo de leitor, diagnóstico. Há também "Cycle Kill Card" para encerrar ciclo.
+- **`r9Pr` / R9PR = Regular Price** (preço padrão de *vend*). No Master Book da LG o atalho aparece escrito **`r9Pr`**. No display de 7 segmentos o `g` vira `9`. **ALL** aplica o mesmo preço a todos os ciclos (`COS1`…); preço por ciclo ganha do ALL. Tabela de país (`Loc1`): Coreia/Japão **0–9500 em passos de 100** — combina com o dono baixar de 1000 para 100. EUA é 0–9,95 em 0,05. Brasil **não** está nessa tabela pública. Fontes: [Master Book 2018 (passo a passo)](https://www.scribd.com/document/685096870/2018-LG-Commercial-Master-Book-V1-3-organized); [manual Giant-C / regular price](https://www.manualslib.com/manual/2706216/Lg-Fh069f4d.html?page=26); [secador RV1329 ALL/COS](https://www.manualslib.mx/manual/537798/Lg-Rv1329C1T.html?page=25); [manual GCWP1069](https://www.fowlercompanies.com/wp-content/uploads/2019/11/GCWP1069-Owners.pdf).
 - **Greenwald Pay Plus**: dispositivo de terceiros que substitui o chicote do leitor ESD e fala **serial** com a placa da máquina; exige ativar "Serial Payment System" e uma chave DIP #3. Códigos de erro EC18/EC19 = "sem comunicação entre leitor e placa". Isso prova que **a serial do leitor ESD é "emulável" por terceiros**, mas Greenwald tem acordo comercial/documentação. https://greenwaldindustries.com/wp-content/uploads/2021/11/4104-002-3-ACA-ESD-cardreaders-install.pdf
 - **Leitor serial ESD (Laundry Wizard)**: usa "protocolo de nível mais alto", 12 Vdc, lê chip, valida código do local, desconta saldo e **inicia a máquina**. https://laundrywizard.com/public/pdf/423_Serial%20Card%20Slides.pdf
 - **API de nuvem da LG**: "LG Commercial Laundry API" (40+ endpoints: Device, Statistics, Store, Log, Callback/Webhook), com **NDA, contrato de API e chaves** (QA e OP). Passa pelo módulo Wi-Fi/servidor LG. https://www.lg.com/global/business/commercial-laundry/smart-laundry-lounge/
 - Apps LG: "Laundry Lounge Installer" (cadastro, só para autorizados) e "Laundry Lounge" (monitoramento).
 
 ### 2.2 Não encontrei (e é importante dizer)
-- Protocolo serial (baud, paridade, framing, checksum, comandos) entre placa LG e leitor ESD. **Não é público.**
+- Protocolo serial (baud, paridade, framing, checksum, comandos) entre placa LG e leitor ESD. **Não é público.** Não inventar bytes.
 - Se a API de nuvem da LG tem **comando de iniciar/liberar ciclo** (só vi menção a remote control e a endpoints genéricos, sem lista pública).
 - Manual de **serviço** (service manual) completo: não achei versão pública. Usei o manual do dono, que é público.
-- "**Canais 100 a 1000**" e "Central Control" (nome específico): não aparecem. O termo mais próximo na LG é "Central Payment System" e "Smart Solution". Pode ser jargão da Cicclo (ex.: valor/crédito) ou de outra marca. **Perguntar à Cicclo/LG.**
 - Se o **MDCRS** tem o conector de **moeda** realmente ativo (a LG diz que existem 2 conectores, mas não diz se o de moeda funciona em modelo "Card").
+- Código de país (`Loc1`) **desta** máquina no Brasil. O passo de 100 bate com Coreia/Japão na tabela pública; não achamos “Brasil” nessa lista.
 
 ---
 
@@ -92,8 +93,8 @@ Nota: a Cicclo não é citada no manual da LG. Se ela usa a serial do leitor de 
 
 | # | Opção | Como funciona | Risco | Esforço | Situação |
 |---|---|---|---|---|---|
-| A | **Emular o leitor de cartão ESD (serial)** | ESP32 + transceptor diferencial fala o protocolo do leitor com a placa. É o que Greenwald/Cicclo parecem fazer. | Alto: protocolo desconhecido; erro pode travar a máquina | Alto (engenharia reversa) | Protocolo **[Medir]** |
-| B | **Pulso de moeda** | ESP32 + optoacoplador gera pulso de 50 ms no conector de moeda (2 fios). Preço por nº de pulsos. | Médio: precisa do conector estar ativo no modelo Card e do "Pay type" certo | Baixo | Viabilidade **[Medir]** |
+| A | **Emular o leitor de cartão ESD (serial)** | ESP32 + transceptor diferencial **finge ser o leitor**. A máquina espera crédito **≥ r9Pr (100)**. Greenwald/Cicclo/Nayax fazem isso. | Alto: **ainda não temos os bytes**; erro pode travar a máquina | Alto (medir, depois implementar) | Protocolo **[Medir]** |
+| B | **Pulso de moeda** | ESP32 + opto gera pulso (50 ms ESD/Greenwald/Munzprufer, ou 100 ms Coreia). Cada pulso soma o valor da moeda (`Co1`); o ciclo parte quando a soma ≥ **100**. | Médio: precisa do conector de moeda ativo no modelo Card e do tipo certo | Baixo | Viabilidade **[Medir]** |
 | C | **Simular o botão Start** (modo OPL/FrEE) | Relé/optoacoplador em paralelo à micro-chave Start. Máquina fica em "PUSH"; cliente escolhe ciclo, nosso sistema só autoriza o Start. | Baixo-médio: a máquina não "cobra"; ciclo/preço são nossos. Precisa escolher ciclo por botões também | Baixo | Plausível; tecnicamente simples |
 | D | **API de nuvem LG** | Backend chama API da LG | Médio: contrato, NDA, custo; depende de comando de start | Médio | Não sabemos se existe comando |
 | E | **Manter a Cicclo** | Já funciona | – | – | Referência |
@@ -122,7 +123,7 @@ Ordem: do menos arriscado ao mais. **Pare em qualquer dúvida.** Uma pessoa segu
 1. Fotos novas, com boa luz e foco: (a) os dois conectores `ESDUS_OUT_PIN2` e `ESDUS_IN_PIN1` de frente e **a serigrafia completa** (todos os rótulos dos pinos); (b) o **lado de baixo** da placa nesses conectores (trilhas); (c) o dispositivo Cicclo inteiro, os dois lados, com etiquetas e modelo; (d) para onde cada cabo preto vai.
 2. Registrar a **cor e a posição de cada fio** em cada conector (planilha, pino 1 a 6 e cores).
 3. Verificar com a Cicclo: modelo do módulo, se é comodato, se há cláusula de exclusividade.
-4. Entrar no modo de programação (senha 3000) **sem alterar nada** e anotar: tipo de produto (PAY/FrEE), tipo de leitor (0 Greenwald/1 ESD), versão de firmware (`P0:CE`, `gF:XX`...). Só leitura, anote tudo.
+4. Entrar no SETUP **sem mudar preço** e anotar: `r9Pr` / ALL (hoje o dono usa **100**), PAY/FrEE, vend type (moeda/cartão), tipo de leitor (0 Greenwald / 1 ESD), valor da moeda (`Co1`), país (`Loc1`), firmware (`P0:CE`, `gF:XX`…). Só leitura, anote tudo.
 
 ### Etapa 1 — Máquina DESLIGADA da tomada (multímetro, continuidade)
 5. Disjuntor desligado + plugue fora da tomada. Esperar 5 min.
@@ -183,7 +184,7 @@ Ordem: do menos arriscado ao mais. **Pare em qualquer dúvida.** Uma pessoa segu
 
 ### 6.4 UART (opção A)
 - Perfil de UART (baud, bits, paridade, parada) vem das medições. Hoje **desconhecido**.
-- Camadas: (1) driver UART com FIFO e *timeouts* de quadro; (2) *parser* de quadros (início/fim/checksum); (3) máquina de estados do "leitor virtual" (inicialização, ocioso, crédito, ocupado, erro); (4) camada de comandos "liberar máquina com preço X".
+- Camadas: (1) driver UART com FIFO e *timeouts* de quadro; (2) *parser* de quadros (início/fim/checksum); (3) máquina de estados do **leitor virtual** (inicialização, ocioso, crédito **≥ r9Pr**, ocupado, erro); (4) comando “liberar” = **creditar o preço de vend** (hoje 100), não um “canal Cicclo”. **Não há quadro serial conhecido** — o stub do firmware continua vazio de propósito.
 - **Modo escuta (sniffer)** primeiro: firmware que **apenas grava** o tráfego e envia por MQTT/serial USB para análise. Isso reduz risco antes de transmitir.
 - *Watchdog* e reinício limpo: se o barramento ficar mudo por N segundos, entrar em estado de erro e avisar o backend.
 
@@ -237,7 +238,47 @@ Ordem: do menos arriscado ao mais. **Pare em qualquer dúvida.** Uma pessoa segu
 | A Cicclo usa essa serial? | Hipótese (não visto de forma clara nas fotos) |
 | Níveis elétricos (RS-422? TTL?) | Não medido |
 | Baud e protocolo | Desconhecido |
-| "Canais 100–1000" | Não encontrado |
+| “Canal” 100–1000 | **É o preço `r9Pr` da LG**, passos de 100. Não é protocolo Cicclo. **[Confirmado]** |
+| Sinal elétrico (UART vs pulso) | **Não medido** |
 | API de nuvem LG tem comando de iniciar? | Desconhecido |
 | Pulso de moeda funciona no modelo Card? | Desconhecido |
 | Lógica da placa é isolada da rede? | Desconhecido (assumir que não) |
+
+---
+
+## 9. Programação do dono: SETUP → R9PR → ALL → 100
+
+Máquinas desta loja: lavadora **LG Giant-C Max Washer CWG27MDCRS.ASSGBRS (FH069FD6F)** e secadora **Dryer CDG27MUCES.ASSGBRS (RV1329C7P)**. Painel **EBR8344SY / EAX61543618**. Conector **ESDUS** com RX/TX.
+
+### 9.1 O que o dono faz no painel
+1. Entra em **SETUP** (modo de programação). Caminhos oficiais: cartão de serviço (tipo cartão); chave do cofre de moeda (tipo moeda); ou, em todos os tipos recentes, **1º+3º juntos → 2º três vezes → Start** (senha padrão **3000** em alguns painéis).
+2. Vai até **R9PR** (`r9Pr` no Master Book = Regular Price).
+3. Escolhe **ALL** (o mesmo preço para todos os ciclos).
+4. Desce o valor de **1000 para 100** (botão que diminui; o passo é **100**).
+5. Confirma com **Start**.
+
+Cicclo, VMPay e Nayax pedem essa mesma programação: a **máquina** fica com vend **100**; o leitor só precisa creditar **100**.
+
+### 9.2 O que R9PR e o 100 significam
+| Termo | Significado |
+|---|---|
+| **R9PR / `r9Pr` / `rgPr`** | Preço regular de *vend*: quanto a máquina exige para liberar o ciclo. Não é frequência de rádio, não é ID de protocolo Cicclo. |
+| **ALL** | Copia esse preço para todos os cursos (`COS1` quente, `COS2` morno, etc.). Preço individual de um COS **vence** o ALL. Na secadora, o Master Book diz que todos os cursos usam o preço regular. |
+| **100** | Unidade de preço no painel. Com passo de 100 (tabela Coreia/Japão: 0–9500), a escala visível é 0, 100, 200, … 1000, … Não é “canal 1” da Cicclo. |
+| **1000** | Outro valor possível na **mesma** escala (ex.: dez vezes o preço, ou dez pulsos se a moeda valer 100). O dono **abaixa** para 100 = **um crédito / um ciclo**. |
+| **Moeda** | Cada pulso soma `Co1` (valor da moeda 1). O ciclo começa quando a soma ≥ `r9Pr`. Se `Co1` = 100 e `r9Pr` = 100, **um pulso** libera. |
+| **Cartão / sistema central** | O leitor manda crédito (em geral na serial ESD). A máquina compara com `r9Pr`. Crédito **100** libera o ALL. |
+
+O dinheiro real (reais no app) **não** precisa ser 100. O 100 é só a conta interna da LG. O nosso backend cobra em reais; a ESP32, no fio, precisa entregar **crédito 100** (ou um pulso equivalente).
+
+### 9.3 O que isso muda para a ESP32
+- **Fazer:** ocupar o lugar do leitor/moedeiro no conector da **LG** (`ESDUS` e/ou moeda) e creditar **100** quando o MQTT mandar liberar.
+- **Não fazer:** procurar um “protocolo Cicclo”. Cicclo, VMPay e Nayax são só clientes desse *vend* da LG.
+- **Ainda não sabemos o sinal elétrico.** Fotos mostram RX/TX no ESDUS, o que **aponta** para serial de cartão. A FAQ da LG também descreve pulso de moeda em outro conector. Sem osciloscópio: **não dá para escolher A vs B**. Sem frames: o driver serial **não envia bytes**.
+- O campo `channel` 100–1000 no MQTT/firmware deve ser lido como **preço de vend**, em passos de 100, não como canal de rádio.
+
+### 9.4 O que continua em aberto
+- UART diferencial vs TTL vs pulso de moeda.
+- Baud, formato e qualquer comando serial.
+- Se o modelo Card desta loja ainda aceita pulso de moeda.
+- `Loc1` (país) gravado nestas placas.

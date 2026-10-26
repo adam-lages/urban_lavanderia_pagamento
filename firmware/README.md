@@ -41,7 +41,7 @@ ESP32 GPIO26 --[resistor 330R]--> LED do optoacoplador (ex.: PC817) --> GND
 
 ### Driver serial (sniffer)
 
-Objetivo: **descobrir o protocolo** (a máquina LG parece usar serial no conector do leitor de cartão; veja `analise-placa-e-protocolo.md`).
+Objetivo: **descobrir o sinal no conector da LG** (leitor de cartão / *vend*). O painel está em **`r9Pr` ALL = 100**. Isso é preço de vend da máquina, não protocolo Cicclo. Veja `analise-placa-e-protocolo.md` seção 9.
 
 - Usa a UART2: RX no GPIO 16 (TX no GPIO 17, só se `SERIAL_DEBUG_TX=1`). Camada de transporte abstrata (`SerialTransport`), então dá para trocar a UART real por outra implementação ou por um falso nos testes.
 - Em modo sniffer o **TX nem é configurado**: a ESP32 não transmite nada para a máquina.
@@ -84,7 +84,7 @@ O `secrets.h` é versionado de propósito (repositório PRIVADO). Nunca torne o 
 
 - **ID único:** `esp-<MAC>`. Tópicos: `lav/<id>/cmd`, `ack`, `status`, `info` (contrato em `packages/protocol`).
 - **Presença:** publica `online` retido ao conectar; o broker publica `offline` (LWT) se a placa cair. A cada 30 s envia heartbeat em `info` (firmware, IP, sinal Wi-Fi, uptime, driver).
-- **Comando:** `{commandId, channel, issuedAt, expiresAt}`. A placa rejeita comando expirado (usa hora NTP; só fica online com o relógio certo), canal inválido (100 a 1000) ou ocupada.
+- **Comando:** `{commandId, channel, issuedAt, expiresAt}`. A placa rejeita comando expirado (usa hora NTP; só fica online com o relógio certo), `channel` fora de **100–1000** (preço `r9Pr` em passos de 100) ou ocupada.
 - **Idempotência:** guarda os últimos 16 `commandId` na memória não volátil (NVS), marcando **antes** de acionar. Repetido = não aciona de novo, só responde `done` outra vez.
 - **Ack:** `done` ao terminar o pulso; `rejected` com motivo nos demais casos.
 - **Robustez:** reconexão automática de Wi-Fi e MQTT, watchdog de 30 s, reinício se ficar 10 min sem Wi-Fi ou 15 min sem MQTT.
