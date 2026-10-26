@@ -7,7 +7,9 @@
 #include <sys/time.h>
 #include "config.h"
 #include "lav_core.h"
+#include "led_pattern.h"
 #include "release_driver.h"
+#include "status_led.h"
 
 #if MQTT_USE_TLS
 #include <WiFiClientSecure.h>
@@ -34,6 +36,9 @@ static lav::ReleaseDriver& driver = driverImpl;
 static PubSubClient mqtt(netClient);
 static Preferences prefs;
 static lav::RecentIds recent;
+static StatusLed statusLed;
+static const lav::LedPattern kCmdPattern{CMD_BLINKS, CMD_BLINK_MS, CMD_HOLD_MS};
+static uint32_t cmdLedStart = 0, errorLedUntil = 0;
 
 static char deviceId[24];
 static char topicCmd[48], topicAck[48], topicStatus[48], topicInfo[48], topicDebugRx[56], topicDebugCmd[56];
@@ -100,9 +105,11 @@ static void handleCommand(const char* payload, size_t len) {
   if (!driver.start(cmd.channel, &reason)) {
     recent.remove(cmd.id);
     persistRecent();
+    errorLedUntil = millis() + 3000;
     return publishAck(cmd.id, false, reason);
   }
   strncpy(activeId, cmd.id, sizeof(activeId) - 1);
+  cmdLedStart = millis() ? millis() : 1;
   Serial.printf("[cmd] executando %s (canal %d)\n", cmd.id, cmd.channel);
 }
 
@@ -196,6 +203,7 @@ static void serviceMqtt() {
 
 void setup() {
   driver.begin();  // primeiro: saída em estado seguro
+  statusLed.begin();
   Serial.begin(115200);
   bootMs = millis();
 
@@ -246,6 +254,18 @@ void setup() {
   esp_task_wdt_add(nullptr);
 }
 
+static void updateStatusLed() {
+  if (!StatusLed::enabled()) return;
+  const uint32_t now = millis();
+  if (cmdLedStart && !kCmdPattern.finished(now - cmdLedStart)) {
+    statusLed.set(kCmdPattern.isOn(now - cmdLedStart) ? StatusLed::Green : StatusLed::Off);
+    return;
+  }
+  cmdLedStart = 0;
+  if (static_cast<int32_t>(errorLedUntil - now) > 0 || !mqtt.connected()) statusLed.set(StatusLed::Red);
+  else statusLed.set(StatusLed::Blue);
+}
+
 void loop() {
   esp_task_wdt_reset();
   serviceWifi();
@@ -262,11 +282,14 @@ void loop() {
     } else if (st == lav::DriverState::Failed) {
       recent.remove(activeId);
       persistRecent();
+      errorLedUntil = millis() + 3000;
       publishAck(activeId, false, "driver_failed");
       driver.acknowledge();
       activeId[0] = 0;
     }
   }
+
+  updateStatusLed();
 
   if (mqtt.connected() && millis() - lastBeat >= HEARTBEAT_MS) {
     lastBeat = millis();

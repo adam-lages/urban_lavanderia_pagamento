@@ -31,7 +31,31 @@
 #ifndef MOCK_LED_PIN
 #define MOCK_LED_PIN 2
 #endif
-#define MOCK_LED_MS 1500
+// Padrão ao receber "liberar": 3 piscadas rápidas + ~2 s aceso, depois apaga.
+#ifndef CMD_BLINKS
+#define CMD_BLINKS 3
+#endif
+#ifndef CMD_BLINK_MS
+#define CMD_BLINK_MS 150
+#endif
+#ifndef CMD_HOLD_MS
+#define CMD_HOLD_MS 2000
+#endif
+
+// LED RGB externo (OPCIONAL). Defina os 3 pinos em secrets.h; -1 = sem RGB (só o LED onboard).
+// Azul = conectado, verde = comando recebido, vermelho = erro (sem Wi-Fi/MQTT ou comando falhou).
+#ifndef RGB_R_PIN
+#define RGB_R_PIN -1
+#endif
+#ifndef RGB_G_PIN
+#define RGB_G_PIN -1
+#endif
+#ifndef RGB_B_PIN
+#define RGB_B_PIN -1
+#endif
+#ifndef RGB_COMMON_ANODE
+#define RGB_COMMON_ANODE 0  // 0 = cátodo comum (GND comum); 1 = ânodo comum (3,3 V comum)
+#endif
 
 // Driver serial (RELEASE_DRIVER=2)
 #ifndef SERIAL_RX_PIN

@@ -1,7 +1,7 @@
 import type { Queryable } from "./db.js";
 
 /** Cria a loja demo se o banco estiver vazio. Devolve true se criou. */
-export async function seedIfEmpty(db: Queryable): Promise<boolean> {
+export async function seedIfEmpty(db: Queryable, boardId: string | undefined = process.env.DEMO_BOARD_ID?.trim()): Promise<boolean> {
   const existing = await db.query("SELECT 1 FROM stores LIMIT 1");
   if (existing.rows.length) {
     console.log("Banco já possui lojas; seed ignorado.");
@@ -24,6 +24,14 @@ export async function seedIfEmpty(db: Queryable): Promise<boolean> {
       "INSERT INTO machines (id, store_id, kind, label, channel, device_id, created_at) VALUES ($1,$2,$3,$4,$5,$6,now())",
       [id, storeId, kind, label, channel, `esp-${id}`],
     );
+  if (boardId) {
+    // Placa real de teste (ex.: esp-a4cf12345678, aparece no monitor serial): já nasce como "Lavadora 1".
+    await db.query(
+      "INSERT INTO devices (device_id, name, store_id, kind, first_seen_at) VALUES ($1,'Lavadora 1',$2,'WASHER',now()) ON CONFLICT (device_id) DO NOTHING",
+      [boardId, storeId],
+    );
+    console.log(`Placa ${boardId} cadastrada como "Lavadora 1" (loja-demo).`);
+  }
   console.log("Seed criado: loja-demo com 4 máquinas (devices esp-m1..esp-m4).");
   return true;
 }

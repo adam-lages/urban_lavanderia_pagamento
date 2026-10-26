@@ -32,7 +32,7 @@ Para mudar a rede:
 
 ## 2. Primeiro teste: modo mock (só o LED)
 
-No modo **mock** a placa **não aciona a máquina**. Quando o dashboard manda “liberar”, o **LED da própria ESP32** acende por cerca de 1,5 segundo.
+No modo **mock** a placa **não aciona a máquina**. Quando o dashboard manda “liberar”, o **LED azul da própria ESP32** pisca **3 vezes rápido**, fica **aceso uns 2 segundos** e apaga.
 
 Comece **sempre** por esse modo.
 
@@ -62,7 +62,18 @@ pio device monitor
 
 5. Se aparecer `Connecting...` e travar: segure o botão **BOOT** da placa até o upload começar.
 6. No monitor serial (115200) aparece algo como `placa esp-a4cf...`. Esse é o ID da placa.
-7. No dashboard, menu **Máquinas**, a placa deve ficar **Online**. Cadastre e clique em **Liberar máquina**: o LED deve acender.
+7. No dashboard, menu **Máquinas**, a placa deve ficar **Online**. Cadastre e clique em **Liberar máquina**: o LED deve piscar (veja a seção 3.1).
+
+### 3.1 Teste do Liberar (confirmar que o LED reage)
+
+1. Edite `firmware/include/secrets.h`: `MQTT_HOST` = **IP do seu PC na rede local** (não `localhost`; no Windows use `ipconfig`, no Linux/Mac `ip a` ou `ifconfig`). `MQTT_PORT` = **1883**. PC e ESP32 no mesmo Wi-Fi (2,4 GHz).
+2. No PC, rode o backend (`npm run dev:backend`). Ele já abre o MQTT na porta 1883.
+3. **Firewall**: libere a porta **TCP 1883** de entrada no PC (Windows: “Firewall do Windows” → nova regra de entrada). Sem isso a placa nunca fica Online.
+4. Grave o `esp32doit-mock` e abra o monitor serial. Anote o ID (`esp-...`).
+5. No dashboard → **Máquinas**: a placa aparece **Online**. Dê o nome **Lavadora 1** (loja e tipo Lavadora) e salve. Dica: se o backend subir com `DEMO_BOARD_ID=esp-SEU_ID`, a placa já nasce como “Lavadora 1” no banco novo.
+6. Clique em **Liberar** na Lavadora 1. O LED azul da placa deve: **piscar 3 vezes rápido → ficar aceso ~2 s → apagar**. No monitor serial aparece `[cmd] executando` e depois `[ack]`.
+
+Se não piscar: placa Offline (confira IP, porta, firewall, Wi-Fi) ou ID diferente do cadastrado.
 
 Detalhes extras (GPIO, serial, MQTT) estão em [`README.md`](README.md).
 

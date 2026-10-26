@@ -27,6 +27,15 @@ describe("dev embutido", () => {
     await db.end();
   });
 
+  it("cadastra a placa de teste como Lavadora 1 quando DEMO_BOARD_ID é informado", async () => {
+    const db = openDb(loadConfig({ DATABASE_EMBEDDED: "true" }));
+    await migrate(db);
+    await seedIfEmpty(db, "esp-aabbccddeeff");
+    const r = await db.query("SELECT name, kind FROM devices WHERE device_id = 'esp-aabbccddeeff'");
+    expect(r.rows[0]).toMatchObject({ name: "Lavadora 1", kind: "WASHER" });
+    await db.end();
+  });
+
   it("sobe o broker MQTT em porta livre", async () => {
     const broker = await startEmbeddedBroker({ host: "127.0.0.1", port: 0 });
     expect(broker.url).toMatch(/^mqtt:\/\/127\.0\.0\.1:\d+$/);

@@ -11,7 +11,7 @@ Hoje existem três “modos” (drivers), escolhidos na hora de gravar:
 
 | Modo (ambiente PlatformIO) | O que faz |
 | --- | --- |
-| `esp32doit-mock` | Só acende o **LED** da placa (~1,5 s). Comece sempre por aqui. |
+| `esp32doit-mock` | Só pisca o **LED azul** da placa quando chega “liberar” (3 piscadas + ~2 s aceso). Comece sempre por aqui. |
 | `esp32doit-serial` | **Chicote de cartão (ESDUS).** Só **escuta** a serial. Ainda **não** libera: a LG não publica os bytes. O “canal 100” é o **preço `r9Pr`**, não protocolo Cicclo |
 | `esp32doit-gpio` | Plano B: pulso **50 ms** no GPIO 26 (opto) = moeda ou Start — **não** ligue 220 V, 16,5 V nem 12,5 V na ESP32 |
 
@@ -44,7 +44,7 @@ pio run -e esp32doit-mock -t upload
 pio device monitor
 ```
 
-4. No serial (115200) aparece o ID (`placa esp-…`). No dashboard, menu **Máquinas**, cadastre quando ficar **Online** e teste **Liberar** (o LED deve acender ~1,5 s).
+4. No serial (115200) aparece o ID (`placa esp-…`). No dashboard, menu **Máquinas**, cadastre quando ficar **Online** e teste **Liberar** (o LED azul deve piscar 3 vezes e ficar aceso ~2 s).
 
 Arduino IDE: mesma ideia (placa DOIT ESP32 DEVKIT V1, bibliotecas PubSubClient e ArduinoJson) — siga a seção 4 de `COMO-GRAVAR.md`. Prefira PlatformIO neste repo (`platformio.ini`).
 
@@ -94,7 +94,11 @@ Esses valores estão versionados porque o repositório é **privado**. Não publ
 
 ### Driver mock
 
-LED no GPIO **2**, aceso por **1500** ms.
+LED azul onboard no GPIO **2**. Ao receber “liberar”: **3 piscadas rápidas** (150 ms acende / 150 ms apaga) e depois **~2 s aceso**; então apaga e a placa responde “feito” ao servidor. Não trava o Wi-Fi/MQTT. Ajustes em `config.h`: `CMD_BLINKS`, `CMD_BLINK_MS`, `CMD_HOLD_MS`.
+
+**LED RGB externo (opcional)**: em `secrets.h`, descomente `RGB_R_PIN`, `RGB_G_PIN`, `RGB_B_PIN` (ex.: 25, 26, 27) e `RGB_COMMON_ANODE` (0 = cátodo comum, 1 = ânodo comum). Use resistor de ~220 ohm em cada cor. Azul fixo = conectado; verde (mesmo padrão de piscadas) = comando recebido; vermelho = sem Wi-Fi/MQTT ou comando falhou. Sem esses defines, só o LED da placa é usado.
+
+**Como confirmar que o LED reage**: veja a seção “Teste do Liberar” em `COMO-GRAVAR.md`.
 
 ### Driver serial (sniffer)
 

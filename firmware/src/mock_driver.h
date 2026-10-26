@@ -1,9 +1,10 @@
 #pragma once
 #include <Arduino.h>
 #include "config.h"
+#include "led_pattern.h"
 #include "release_driver.h"
 
-/** Acende o LED onboard por MOCK_LED_MS. Não toca em nada externo: ideal para testar Wi-Fi/MQTT. */
+/** Pisca o LED onboard (CMD_BLINKS piscadas + CMD_HOLD_MS aceso), sem bloquear. Não toca em nada externo: ideal para testar Wi-Fi/MQTT. */
 class MockLedDriver : public lav::ReleaseDriver {
  public:
   explicit MockLedDriver(uint8_t pin) : pin_(pin) {}
@@ -18,15 +19,19 @@ class MockLedDriver : public lav::ReleaseDriver {
       if (reason) *reason = "busy";
       return false;
     }
-    digitalWrite(pin_, HIGH);
+    digitalWrite(pin_, HIGH);  // primeira piscada começa já
     startedMs_ = millis();
     state_ = lav::DriverState::Busy;
     return true;
   }
   void loop(uint32_t nowMs) override {
-    if (state_ == lav::DriverState::Busy && nowMs - startedMs_ >= MOCK_LED_MS) {
+    if (state_ != lav::DriverState::Busy) return;
+    const uint32_t elapsed = nowMs - startedMs_;
+    if (pattern_.finished(elapsed)) {
       digitalWrite(pin_, LOW);
       state_ = lav::DriverState::Done;
+    } else {
+      digitalWrite(pin_, pattern_.isOn(elapsed) ? HIGH : LOW);
     }
   }
   lav::DriverState state() const override { return state_; }
@@ -35,5 +40,6 @@ class MockLedDriver : public lav::ReleaseDriver {
  private:
   uint8_t pin_;
   uint32_t startedMs_ = 0;
+  lav::LedPattern pattern_{CMD_BLINKS, CMD_BLINK_MS, CMD_HOLD_MS};
   lav::DriverState state_ = lav::DriverState::Idle;
 };

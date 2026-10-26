@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "lav_core.h"
+#include "led_pattern.h"
 #include "serial_driver.h"
 
 using namespace lav;
@@ -24,6 +25,20 @@ void test_iso8601() {
   TEST_ASSERT_EQUAL_INT64(1709164800000LL, ms);
   TEST_ASSERT_FALSE(parseIso8601("2026-10-26 17:00:00", ms));
   TEST_ASSERT_FALSE(parseIso8601("lixo", ms));
+}
+
+void test_led_pattern() {
+  LedPattern p{3, 150, 2000};
+  TEST_ASSERT_EQUAL_UINT32(2900, p.totalMs());
+  TEST_ASSERT_TRUE(p.isOn(0));
+  TEST_ASSERT_FALSE(p.isOn(150));
+  TEST_ASSERT_TRUE(p.isOn(300));
+  TEST_ASSERT_FALSE(p.isOn(750));
+  TEST_ASSERT_TRUE(p.isOn(900));
+  TEST_ASSERT_TRUE(p.isOn(2899));
+  TEST_ASSERT_FALSE(p.finished(2899));
+  TEST_ASSERT_TRUE(p.finished(2900));
+  TEST_ASSERT_FALSE(p.isOn(2900));
 }
 
 void test_parse_command() {
@@ -165,6 +180,7 @@ int main() {
   RUN_TEST(test_recent_ids);
   RUN_TEST(test_ack_and_id);
   RUN_TEST(test_hex);
+  RUN_TEST(test_led_pattern);
   RUN_TEST(test_chunker);
   RUN_TEST(test_serial_sniffer);
   RUN_TEST(test_serial_never_releases_or_sends_by_default);
