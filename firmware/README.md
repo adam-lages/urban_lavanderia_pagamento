@@ -2,6 +2,8 @@
 
 Placa-alvo: **ESP32 DOIT DevKit V1 (ESP32-WROOM-32)**. PlatformIO + Arduino.
 
+**Comece por aqui se for gravar a placa pela primeira vez:** [Como gravar o código na ESP32](COMO-GRAVAR.md) (Arduino IDE e PlatformIO, Wi-Fi, modo mock e avisos de segurança).
+
 A placa conecta no Wi-Fi, fala MQTT com o backend e, ao receber o comando de liberação, aciona **uma** máquina por meio de um **driver de liberação**.
 
 ## Avisos de segurança (leia antes de ligar qualquer fio)

@@ -136,3 +136,4 @@ Depois do login (token de admin), o painel usa um menu lateral:
 ## Firmware ESP32
 
 - Firmware (PlatformIO) em [`firmware/`](firmware/README.md): Wi-Fi, MQTT, drivers de liberação (mock, GPIO, serial sniffer).
+- **Como gravar na ESP32 DOIT DevKit** (passo a passo, Arduino IDE e PlatformIO, Wi-Fi, modo mock): [`firmware/COMO-GRAVAR.md`](firmware/COMO-GRAVAR.md).
