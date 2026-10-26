@@ -14,6 +14,18 @@ infra/mosquitto     config do broker para desenvolvimento
 
 > **Repositório PRIVADO com segredos versionados** (decisão do dono): `.env` (tokens e senhas do backend/MQTT/Postgres) e `firmware/include/secrets.h` (Wi-Fi). Os valores são os padrão de desenvolvimento. **Nunca torne este repositório público sem antes rotacionar todas as credenciais** (e limpar o histórico do git).
 
+## Branches (fluxo do git)
+
+Nesta fase, o código novo vai para **`dev` com push direto, sem abrir PR**.
+
+| Branch | Para que serve |
+| --- | --- |
+| **`dev`** | Trabalho do dia a dia. Pode quebrar. É a branch de desenvolvimento. |
+| **`hml`** | Quase pronto, para testar (homologação). |
+| **`main`** | Produção. Só o que já foi testado. |
+
+Detalhes em [`BRANCHES.md`](BRANCHES.md).
+
 ## Documentação
 
 - [Plano técnico](docs/plano-tecnico.md)
