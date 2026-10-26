@@ -8,6 +8,7 @@
 #include "config.h"
 #include "lav_core.h"
 #include "led_pattern.h"
+#include "led_status.h"
 #include "release_driver.h"
 #include "status_led.h"
 
@@ -254,16 +255,22 @@ void setup() {
   esp_task_wdt_add(nullptr);
 }
 
+static bool everConnected = false;
+
 static void updateStatusLed() {
   if (!StatusLed::enabled()) return;
   const uint32_t now = millis();
-  if (cmdLedStart && !kCmdPattern.finished(now - cmdLedStart)) {
-    statusLed.set(kCmdPattern.isOn(now - cmdLedStart) ? StatusLed::Green : StatusLed::Off);
-    return;
+  const bool connected = mqtt.connected();
+  if (connected) everConnected = true;
+  if (cmdLedStart && kCmdPattern.finished(now - cmdLedStart)) cmdLedStart = 0;
+  lav::LedInputs in{connected, everConnected, now - bootMs, cmdLedStart != 0, now - cmdLedStart,
+                    static_cast<int32_t>(errorLedUntil - now) > 0};
+  switch (lav::ledColor(in, kCmdPattern)) {
+    case lav::RgbColor::Blue: statusLed.set(StatusLed::Blue); break;
+    case lav::RgbColor::Green: statusLed.set(StatusLed::Green); break;
+    case lav::RgbColor::Red: statusLed.set(StatusLed::Red); break;
+    default: statusLed.set(StatusLed::Off); break;
   }
-  cmdLedStart = 0;
-  if (static_cast<int32_t>(errorLedUntil - now) > 0 || !mqtt.connected()) statusLed.set(StatusLed::Red);
-  else statusLed.set(StatusLed::Blue);
 }
 
 void loop() {

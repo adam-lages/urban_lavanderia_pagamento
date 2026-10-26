@@ -21,7 +21,7 @@ A placa conecta no Wi-Fi, fala MQTT com o backend e, ao receber o comando de lib
 |---|---|---|
 | `esp32doit-mock` | LED onboard (GPIO 2) | Testar Wi-Fi + MQTT + dashboard **sem ligar nada** na máquina. Comece por aqui. |
 | `esp32doit-serial` | UART2 em modo **sniffer** | Chicote de **cartão (ESDUS)**. **Não libera** (bytes desconhecidos). |
-| `esp32doit-gpio` | Pulso 50 ms em GPIO 26 | Plano B: moeda (`Cndr`=0) ou Start, por **optoacoplador**. Sem 220 V. |
+| `esp32doit-gpio` | Pulso 50 ms em GPIO 23 | Plano B: moeda (`Cndr`=0) ou Start, por **optoacoplador**. Sem 220 V. |
 
 Configurações ficam em `platformio.ini` (`build_flags`): `GPIO_RELEASE_PIN`, `GPIO_ACTIVE_LEVEL` (`HIGH` ou `LOW`), `GPIO_PULSE_MS` (padrão **50**, faixa 20 a 5000), `SERIAL_RX_PIN`, `SERIAL_TX_PIN`, `SERIAL_BAUD` (9600 é chute), `SERIAL_FORMAT` (ex.: `SERIAL_8N1`, `SERIAL_8E1`), `SERIAL_INVERT`.
 
@@ -30,7 +30,7 @@ Configurações ficam em `platformio.ini` (`build_flags`): `GPIO_RELEASE_PIN`, `
 A ESP32 **não** aciona a máquina diretamente. O GPIO controla um componente isolado, e só o contato dele fica em paralelo ao botão Start (ou entrada de moeda).
 
 ```
-ESP32 GPIO26 --[resistor 330R]--> LED do optoacoplador (ex.: PC817) --> GND
+ESP32 GPIO23 --[resistor 330R]--> LED do optoacoplador (ex.: PC817) --> GND
                                   transistor do optoacoplador = em paralelo ao contato do botão Start
 ```
 

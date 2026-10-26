@@ -4,6 +4,7 @@
 #include <vector>
 #include "lav_core.h"
 #include "led_pattern.h"
+#include "led_status.h"
 #include "serial_driver.h"
 
 using namespace lav;
@@ -39,6 +40,31 @@ void test_led_pattern() {
   TEST_ASSERT_FALSE(p.finished(2899));
   TEST_ASSERT_TRUE(p.finished(2900));
   TEST_ASSERT_FALSE(p.isOn(2900));
+}
+
+void test_led_color_states() {
+  LedPattern p{3, 150, 2000};
+  LedInputs in{true, true, 100000, false, 0, false};
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Blue), static_cast<int>(ledColor(in, p)));
+  in.cmdActive = true;
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Green), static_cast<int>(ledColor(in, p)));
+  in.cmdElapsedMs = 150;
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Off), static_cast<int>(ledColor(in, p)));
+  in.cmdElapsedMs = 1500;
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Green), static_cast<int>(ledColor(in, p)));
+  in.cmdElapsedMs = 5000;
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Blue), static_cast<int>(ledColor(in, p)));
+  in.cmdActive = false;
+  in.errorActive = true;
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Red), static_cast<int>(ledColor(in, p)));
+  in = LedInputs{false, true, 100000, false, 0, false};
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Red), static_cast<int>(ledColor(in, p)));
+  in = LedInputs{false, false, 100, false, 0, false};
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Blue), static_cast<int>(ledColor(in, p)));
+  in.sinceBootMs = 600;
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Off), static_cast<int>(ledColor(in, p)));
+  in.sinceBootMs = 40000;
+  TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Red), static_cast<int>(ledColor(in, p)));
 }
 
 void test_parse_command() {
@@ -181,6 +207,7 @@ int main() {
   RUN_TEST(test_ack_and_id);
   RUN_TEST(test_hex);
   RUN_TEST(test_led_pattern);
+  RUN_TEST(test_led_color_states);
   RUN_TEST(test_chunker);
   RUN_TEST(test_serial_sniffer);
   RUN_TEST(test_serial_never_releases_or_sends_by_default);

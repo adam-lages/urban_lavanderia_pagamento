@@ -13,7 +13,7 @@ Hoje existem três “modos” (drivers), escolhidos na hora de gravar:
 | --- | --- |
 | `esp32doit-mock` | Só pisca o **LED azul** da placa quando chega “liberar” (3 piscadas + ~2 s aceso). Comece sempre por aqui. |
 | `esp32doit-serial` | **Chicote de cartão (ESDUS).** Só **escuta** a serial. Ainda **não** libera: a LG não publica os bytes. O “canal 100” é o **preço `r9Pr`**, não protocolo Cicclo |
-| `esp32doit-gpio` | Plano B: pulso **50 ms** no GPIO 26 (opto) = moeda ou Start — **não** ligue 220 V, 16,5 V nem 12,5 V na ESP32 |
+| `esp32doit-gpio` | Plano B: pulso **50 ms** no GPIO 23 (opto) = moeda ou Start — **não** ligue 220 V, 16,5 V nem 12,5 V na ESP32 |
 
 O ID da placa é `esp-` + o MAC (aparece no monitor serial). Tópicos MQTT: `lav/<id>/cmd`, `ack`, `status`, `info`.
 
@@ -88,7 +88,7 @@ Esses valores estão versionados porque o repositório é **privado**. Não publ
 
 | Item | Atual |
 | --- | --- |
-| Pino | GPIO **26** (`GPIO_RELEASE_PIN`) |
+| Pino | GPIO **23** (`GPIO_RELEASE_PIN`) |
 | Nível ativo | `HIGH` (`GPIO_ACTIVE_LEVEL`; use `LOW` em relé “ativo em baixo”) |
 | Duração do pulso | **50** ms (`GPIO_PULSE_MS`; Coin Drop Type 0 da LG; permitido 20–5000) |
 
@@ -96,7 +96,7 @@ Esses valores estão versionados porque o repositório é **privado**. Não publ
 
 LED azul onboard no GPIO **2**. Ao receber “liberar”: **3 piscadas rápidas** (150 ms acende / 150 ms apaga) e depois **~2 s aceso**; então apaga e a placa responde “feito” ao servidor. Não trava o Wi-Fi/MQTT. Ajustes em `config.h`: `CMD_BLINKS`, `CMD_BLINK_MS`, `CMD_HOLD_MS`.
 
-**LED RGB externo (opcional)**: em `secrets.h`, descomente `RGB_R_PIN`, `RGB_G_PIN`, `RGB_B_PIN` (ex.: 25, 26, 27) e `RGB_COMMON_ANODE` (0 = cátodo comum, 1 = ânodo comum). Use resistor de ~220 ohm em cada cor. Azul fixo = conectado; verde (mesmo padrão de piscadas) = comando recebido; vermelho = sem Wi-Fi/MQTT ou comando falhou. Sem esses defines, só o LED da placa é usado.
+**LED RGB externo (ativo por padrão)**: pinos R=25, G=26, B=27 e `RGB_COMMON_ANODE 0` (cátodo comum) em `secrets.h`. Material: LED RGB 5 mm cátodo comum + 3 resistores 220 Ω (cada cor em série; perna longa no GND). Azul piscando devagar = conectando; azul fixo = conectado; verde (3 piscadas rápidas + ~2 s fixo) = comando recebido; vermelho = sem Wi-Fi/MQTT ou comando falhou/expirou. Para ânodo comum: perna longa no 3V3 e `RGB_COMMON_ANODE 1`. Não ligue nada à máquina LG. Sem RGB ligado, o LED azul da placa segue igual. Ligação detalhada em `COMO-GRAVAR.md`. Obs.: o plano B `esp32doit-gpio` agora usa o GPIO 23 (era 26) para não colidir com o verde.
 
 **Como confirmar que o LED reage**: veja a seção “Teste do Liberar” em `COMO-GRAVAR.md`.
 

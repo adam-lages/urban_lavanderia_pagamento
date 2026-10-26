@@ -16,7 +16,7 @@
 
 // Driver GPIO (RELEASE_DRIVER=1)
 #ifndef GPIO_RELEASE_PIN
-#define GPIO_RELEASE_PIN 26
+#define GPIO_RELEASE_PIN 23
 #endif
 #ifndef GPIO_ACTIVE_LEVEL
 #define GPIO_ACTIVE_LEVEL HIGH  // use LOW para módulo de relé "ativo em nível baixo"

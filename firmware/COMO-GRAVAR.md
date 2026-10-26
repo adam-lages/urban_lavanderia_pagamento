@@ -79,6 +79,25 @@ Detalhes extras (GPIO, serial, MQTT) estão em [`README.md`](README.md).
 
 ---
 
+### LED RGB de status (recomendado)
+
+**O que comprar**: 1 LED RGB de 5 mm **cátodo comum** (4 pernas, a mais longa é o GND) e 3 resistores de **220 Ω**. Opcional: protoboard e fios macho-fêmea.
+
+| Perna do LED RGB | Resistor | Pino da ESP32 |
+| --- | --- | --- |
+| Vermelho (R) | 220 Ω | GPIO **25** |
+| Verde (G) | 220 Ω | GPIO **26** |
+| Azul (B) | 220 Ω | GPIO **27** |
+| Perna longa (GND comum) | nenhum | **GND** |
+
+**Cores**: azul piscando devagar = conectando; **azul fixo** = Wi-Fi + MQTT conectados; **verde** (3 piscadas rápidas + ~2 s aceso) = comando de liberar recebido; **vermelho** = sem Wi-Fi/MQTT, ou comando falhou/expirou.
+
+**Aviso**: o LED só liga na ESP32. **Não ligue nada deste LED à máquina LG.**
+
+**Ânodo comum** (perna longa vai ao 3,3 V): ligue a perna longa no **3V3** e troque em `firmware/include/secrets.h` para `#define RGB_COMMON_ANODE 1`.
+
+**Sem RGB ligado**: nada quebra; o LED azul da própria placa continua piscando como antes. Para desligar o recurso, comente as 3 linhas `RGB_*_PIN` em `secrets.h`.
+
 ## 4. Gravar com Arduino IDE (versão curta)
 
 O projeto foi feito para PlatformIO. A Arduino IDE também serve, com um pouco mais de trabalho.

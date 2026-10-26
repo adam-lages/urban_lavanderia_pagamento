@@ -14,8 +14,9 @@
 // #define MQTT_CA_CERT "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n"
 
 // LED RGB externo OPCIONAL (azul = conectado, verde = comando recebido, vermelho = erro).
-// Sem isto, só o LED azul da própria placa (GPIO2) pisca. Descomente e ajuste os pinos:
-// #define RGB_R_PIN 25
-// #define RGB_G_PIN 26
-// #define RGB_B_PIN 27
-// #define RGB_COMMON_ANODE 0  // 0 = cátodo comum (GND); 1 = ânodo comum (3,3 V). Use resistor ~220 ohm em cada cor.
+// Ativo por padrão (pinos 25/26/27). Sem RGB ligado, o LED azul da placa (GPIO2) segue funcionando.
+// Para desativar, comente as 3 linhas dos pinos.
+#define RGB_R_PIN 25
+#define RGB_G_PIN 26
+#define RGB_B_PIN 27
+#define RGB_COMMON_ANODE 0  // 0 = cátodo comum (GND); 1 = ânodo comum (3,3 V). Use resistor ~220 ohm em cada cor.
