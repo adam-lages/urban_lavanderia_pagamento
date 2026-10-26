@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: lav
+      POSTGRES_PASSWORD: lav
+      POSTGRES_DB: lav
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lav"]
+      interval: 3s
+      retries: 20
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqttdata:/mosquitto/data
+
+  backend:
+    build: .
+    command: sh -c "npm -w @lav/backend run seed && npm -w @lav/backend run start"
+    environment:
+      DATABASE_URL: postgres://lav:lav@postgres:5432/lav
+      MQTT_URL: mqtt://mosquitto:1883
+      ADMIN_TOKEN: dev-admin-token
+      POS_TOKEN: dev-pos-token
+    ports: ["3000:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      mosquitto: { condition: service_started }
+
+  simulator:
+    build: .
+    command: npm -w @lav/simulator run start
+    environment:
+      MQTT_URL: mqtt://mosquitto:1883
+      DEVICE_IDS: esp-m1,esp-m2,esp-m3,esp-m4
+    depends_on: [mosquitto]
+
+  dashboard:
+    build: .
+    command: npm -w @lav/dashboard run dev
+    environment:
+      API_URL: http://backend:3000
+    ports: ["5173:5173"]
+    depends_on: [backend]
+
+volumes:
+  pgdata:
+  mqttdata:

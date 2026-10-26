@@ -1,0 +1,15 @@
+{
+  "name": "@lav/simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/device.ts",
+  "types": "src/device.ts",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": { "@lav/protocol": "*", "mqtt": "^5.10.0" },
+  "devDependencies": { "aedes": "^0.51.0" }
+}
