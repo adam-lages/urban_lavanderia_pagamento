@@ -1,5 +1,24 @@
 # Guia HML — Firmware ESP32 (placa)
 
+## Como gravar o código na ESP32 (jeito mais fácil)
+
+**Recomendado: PlatformIO dentro do VS Code ou do Cursor.** O projeto já está configurado; é mais simples que o Arduino IDE.
+
+1. Instale o VS Code (ou Cursor) e a extensão **PlatformIO IDE**.
+2. No terminal: `git checkout dev && git pull`.
+3. Abra a pasta `firmware/` no editor.
+4. Confira `firmware/include/secrets.h`:
+   - Wi-Fi (`WIFI_SSID`): `Urban_Lavanderia_Setup`
+   - `MQTT_HOST`: o **IP do PC na rede** (onde roda o broker)
+   - porta MQTT: `1883`
+5. Conecte a placa com um cabo USB de **DADOS** (cabo só de carga não funciona).
+6. Grave: `pio run -e esp32doit-mock -t upload`
+7. Monitor serial: `pio device monitor`
+
+**Dica:** se falhar em `Connecting...`, segure o botão **BOOT** da DOIT DevKit até o upload começar.
+
+> Nota: o caminho pelo Arduino IDE existe em [`COMO-GRAVAR.md`](COMO-GRAVAR.md), mas é mais trabalhoso e esse passo a passo **não foi testado**. Para detalhes de gravação, veja esse arquivo.
+
 Este arquivo explica as **configurações** da placa e como elas devem evoluir.  
 Para **gravar** o programa na ESP32 (passo a passo, Arduino IDE e PlatformIO), use **[`COMO-GRAVAR.md`](COMO-GRAVAR.md)** — este guia não substitui aquele.
 
