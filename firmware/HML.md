@@ -17,6 +17,18 @@
 
 **Dica:** se falhar em `Connecting...`, segure o botão **BOOT** da DOIT DevKit até o upload começar.
 
+### Rede Wi-Fi das placas
+
+| Item | Valor |
+| --- | --- |
+| Nome (SSID) | `Urban_Lavanderia_Setup` |
+| Senha | `@Hoje123@` |
+| Onde alterar | `firmware/include/secrets.h` |
+| Porta MQTT | `1883` |
+| `MQTT_HOST` | **IP do PC na rede** (onde roda o broker), não `localhost` |
+
+> Aviso: a senha está visível aqui de propósito (repositório **privado**, autorizado pelo dono). Se o repositório virar público, **troque a senha** do Wi-Fi.
+
 > Nota: o caminho pelo Arduino IDE existe em [`COMO-GRAVAR.md`](COMO-GRAVAR.md), mas é mais trabalhoso e esse passo a passo **não foi testado**. Para detalhes de gravação, veja esse arquivo.
 
 Este arquivo explica as **configurações** da placa e como elas devem evoluir.  
