@@ -7,7 +7,7 @@
     "dev:backend": "npm -w @lav/backend run dev",
     "dev:dashboard": "npm -w @lav/dashboard run dev",
     "dev:simulator": "npm -w @lav/simulator run start",
-    "test": "npm -w @lav/backend run test && npm -w @lav/simulator run test",
+    "test": "npm -w @lav/backend run test && npm -w @lav/simulator run test && npm -w @lav/dashboard run test",
     "typecheck": "npm -w @lav/protocol run typecheck && npm -w @lav/backend run typecheck && npm -w @lav/simulator run typecheck && npm -w @lav/dashboard run typecheck",
     "build:dashboard": "npm -w @lav/dashboard run build"
   },

@@ -7,7 +7,7 @@ simulador de placa ESP32. O plano completo está em [`docs/plano-tecnico.md`](do
 ```
 packages/protocol   contrato MQTT (tópicos e mensagens), compartilhado
 apps/backend        API REST (Fastify + Postgres + MQTT)
-apps/dashboard      painel web React (Vite)
+apps/dashboard      painel web React (Vite + React Router)
 apps/simulator      simulador de ESP32 via MQTT
 infra/mosquitto     config do broker para desenvolvimento
 ```
@@ -62,13 +62,14 @@ curl -s -X POST localhost:3000/orders/<ORDER_ID>/payments -H "$POS" -H 'content-
   -d '{"provider":"simulated","payload":{"externalId":"pay-1","method":"PIX"}}'
 ```
 
-Repetir o passo 2 com o mesmo `externalId` devolve o mesmo pedido e **não** gera novo pulso. Veja o resultado em
-"Vendas" e "Liberações" no dashboard.
+Repetir o passo 2 com o mesmo `externalId` devolve o mesmo pedido e **não** gera novo pulso. No dashboard, a
+liberação aparece em **Máquinas** (status do comando e log). Relatório de vendas continua na API (`GET /reports/sales`);
+a tela de listagem de vendas no painel ainda é placeholder.
 
 ## Testes
 
 ```bash
-npm test             # backend (Postgres em memória + broker MQTT em memória + simulador) e simulador
+npm test             # backend, simulador e dashboard
 npm run typecheck
 npm run build:dashboard
 ```
@@ -115,8 +116,23 @@ POS (`POS_TOKEN`): `GET /pos/stores/:id/config`, `POST /orders`, `GET /orders/:i
 - Relatório agrupa por dia no fuso `America/Sao_Paulo`; migrações são um SQL simples executado na subida.
 - Não testado: `docker compose` (não havia Docker no ambiente de desenvolvimento) e Postgres real (testes usam pg-mem).
 
-## Firmware ESP32 e menu "Máquinas"
+## Dashboard (rotas)
+
+Depois do login (token de admin), o painel usa um menu lateral:
+
+| Rota | Tela | Estado |
+| --- | --- | --- |
+| `/` | Início | placeholder (“Em breve.”) |
+| `/clientes` | Listagem de clientes | placeholder |
+| `/vendas` | Listagem de vendas | placeholder |
+| `/lavanderias` | Minhas Lavanderias | placeholder |
+| `/cupons` | Cupons | placeholder |
+| `/maquinas` | Máquinas | funcional |
+| `/login` | Entrar | token de administrador |
+
+**Máquinas** lista as placas (nome, tipo lava/seca, loja, online/offline, última vez visto), cadastro/edição e botão
+**Liberar** com confirmação. API: `GET /boards`, `PATCH /boards/:deviceId`, `POST /boards/:deviceId/release`.
+
+## Firmware ESP32
 
 - Firmware (PlatformIO) em [`firmware/`](firmware/README.md): Wi-Fi, MQTT, drivers de liberação (mock, GPIO, serial sniffer).
-- Dashboard, aba **Máquinas**: lista as placas (online/offline, visto por último), cadastro (nome, loja, tipo) e botão **Liberar máquina**.
-- API: `GET /boards`, `PATCH /boards/:deviceId`, `POST /boards/:deviceId/release` (token de admin).
