@@ -18,18 +18,19 @@ class SerialTransport {
 };
 
 /**
- * Driver serial da máquina LG (conector ESDUS / leitor de cartão).
+ * Driver serial da máquina LG (conector ESDUS / leitor de cartão, 6 fios).
  *
  * A máquina cobra o preço de vend r9Pr (hoje ALL = 100). Cicclo/VMPay/Nayax
  * só creditam esse valor; não existe “protocolo Cicclo” neste fio.
+ * Pulso de moeda (50 ms, ~16,5 V) é OUTRO conector — não este driver.
  *
- * ESTADO ATUAL: bytes DESCONHECIDOS (UART vs pulso ainda não medido). O driver
+ * ESTADO ATUAL: bytes DESCONHECIDOS (manuais não publicam UART). O driver
  *  - escuta a serial (SNIFFER) e entrega cada quadro RX em hexadecimal ao `RxSink`;
  *  - NÃO libera máquina: start() sempre recusa com "serial_protocol_unknown".
  *
  * Quando a captura mostrar o crédito de 100, implemente buildReleaseFrame()
  * e troque start() para enviar o quadro; o restante do firmware não muda.
- * Não inventar frames.
+ * Não inventar frames. Não ligar 12,5 V no GPIO da ESP32.
  */
 class SerialDriver : public ReleaseDriver {
  public:

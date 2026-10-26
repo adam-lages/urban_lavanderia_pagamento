@@ -8,7 +8,7 @@ Você **não precisa** ligar a placa em nenhuma máquina de lavar para o primeir
 
 - **Não ligue a ESP32 na máquina 220 V** no primeiro teste. Ela funciona com USB (5 V) e lógica de 3,3 V.
 - **Não conecte fios na lavadora/secadora** até o teste com LED dar certo.
-- **Nunca** ligue 220 V, 12 V ou 5 V direto nos pinos da ESP32: isso queima a placa.
+- **Nunca** ligue 220 V, 16,5 V (moeda) ou 12,5 V (cartão) direto nos pinos da ESP32: isso queima a placa.
 - Use só o cabo USB no computador. A placa pode ficar na mesa, longe da máquina.
 
 ---
@@ -39,8 +39,8 @@ Comece **sempre** por esse modo.
 | O que usar | Significado |
 |---|---|
 | Ambiente `esp32doit-mock` (PlatformIO) | LED, sem fios na máquina |
-| `esp32doit-gpio` | Só depois, com técnico e isolamento |
-| `esp32doit-serial` | Só para escutar a serial da máquina, mais tarde |
+| `esp32doit-serial` | Depois do LED: **escutar** o chicote de **cartão** (ESDUS). Ainda não libera. |
+| `esp32doit-gpio` | Só plano B (moeda 50 ms ou Start), com técnico e opto |
 
 ---
 
@@ -92,10 +92,12 @@ Use o **Monitor Serial** a 115200 para ver o ID da placa.
 
 ## 5. O que fazer depois que o LED funcionar
 
-Só então pense em ligar algo na máquina, com:
+A máquina **já tem chicote** para o cabo da ESP32. No modelo Card/OPL esse chicote é o de **leitor (6 fios, serial)**.
 
-- medição de tensão **antes** de conectar;
-- optoacoplador (nunca 220 V no pino da ESP32);
-- leitura de [`docs/analise-placa-e-protocolo.md`](../docs/analise-placa-e-protocolo.md) — a máquina está em **vend 100** (`r9Pr` / ALL). A ESP32 deve **emular cartão/moeda nesse conector**, não um protocolo Cicclo. Ainda **não sabemos** se o sinal é serial ou pulso; não grave um “liberador serial” até medir.
+**Plugar (quando for a hora):** só o conector de **cartão / ESDUS**. Na primeira vez, máquina **desligada da tomada**, mapear pinos. Depois medir tensões. Depois sniffer (`esp32doit-serial`) com transceptor isolado, **só RX**.
 
-Até lá, deixe a ESP32 só no USB e no Wi-Fi.
+**Não plugar ainda:** 220 V; 12,5 V ou 16,5 V na ESP32; TX da ESP32; o conector de **moeda** (2 fios) se você estiver no caminho de cartão.
+
+Leia [`docs/analise-placa-e-protocolo.md`](../docs/analise-placa-e-protocolo.md) seções 9 e 10. Vend **100** (`r9Pr` / ALL) é preço da LG, não protocolo Cicclo. **Não invente bytes UART.**
+
+Até a continuidade estar anotada, deixe a ESP32 só no USB e no Wi-Fi.

@@ -4,10 +4,11 @@
 #include "release_driver.h"
 
 /**
- * Pulso em um GPIO (via optoacoplador/relé): botão Start (OPL) ou pulso de moeda.
- * Se for moeda, um pulso só libera se Co1 e r9Pr da LG baterem (hoje r9Pr ALL = 100).
- * Ainda não medido se esta loja usa moeda ou serial de cartão.
- * Nível ativo e duração: platformio.ini (GPIO_ACTIVE_LEVEL, GPIO_PULSE_MS).
+ * Pulso em um GPIO (via optoacoplador/relé): plano B (moeda ou botão Start).
+ * Esta loja é Card/OPL: o chicote plug-in é serial de cartão (use esp32doit-serial).
+ * Moeda (outro conector, 2 fios ~16,5 V): um pulso de 50 ms soma Co1; libera se ≥ r9Pr (100).
+ * Nível ativo e duração: platformio.ini (GPIO_ACTIVE_LEVEL, GPIO_PULSE_MS=50).
+ * Nunca ligue 220 V, 16,5 V ou 12,5 V no pino da ESP32.
  * O pino fica inativo no boot, entre pulsos e ao reiniciar.
  */
 class GpioPulseDriver : public lav::ReleaseDriver {

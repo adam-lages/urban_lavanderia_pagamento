@@ -9,7 +9,7 @@ A placa conecta no Wi-Fi, fala MQTT com o backend e, ao receber o comando de lib
 ## Avisos de segurança (leia antes de ligar qualquer fio)
 
 - **Nunca ligue a ESP32 direto em 220 V / rede elétrica.** Ela trabalha com 3,3 V e é alimentada por USB/5 V.
-- **Nada deve ser ligado na máquina antes de medir.** Meça tensões e níveis com a máquina desligada da tomada e depois com cuidado (veja a análise da placa e do protocolo, `analise-placa-e-protocolo.md`, na pasta de docs do projeto). A lógica da placa da LG pode não ser isolada da rede.
+- **Nada deve ser ligado na máquina antes de medir.** Primeiro: tomada fora, continuidade nos pinos do chicote de **cartão (ESDUS)**. Depois tensões. A lógica da placa da LG pode não ser isolada da rede. Veja `docs/analise-placa-e-protocolo.md` seção 10.
 - **Nível de tensão:** a UART da ESP32 é **3,3 V (TTL)**. A serial da máquina LG pode usar outro nível (por exemplo 5 V, 12 V ou **diferencial RS-422/485**: Tx+/Tx−, Rx+/Rx−). Pode ser necessário um **conversor de nível** (level shifter) ou um **transceptor RS-422/485** (de preferência isolado). Ligar 5 V ou 12 V direto nos pinos da ESP32 **queima a placa**.
 - Use sempre **GND comum só depois de medir** e prefira isolamento galvânico (optoacoplador, transceptor/USB isolado).
 - Não corte, não solde e não remova nada do equipamento da Cicclo sem ler o contrato. Pode anular a garantia da LG.
@@ -20,10 +20,10 @@ A placa conecta no Wi-Fi, fala MQTT com o backend e, ao receber o comando de lib
 | Ambiente | Driver | Para quê |
 |---|---|---|
 | `esp32doit-mock` | LED onboard (GPIO 2) | Testar Wi-Fi + MQTT + dashboard **sem ligar nada** na máquina. Comece por aqui. |
-| `esp32doit-gpio` | Pulso em GPIO (padrão GPIO 26) | Simular botão Start / pulso de moeda por **optoacoplador ou relé**. |
-| `esp32doit-serial` | UART2 em modo **sniffer** | Descobrir o protocolo da máquina. **Não libera** a máquina ainda. |
+| `esp32doit-serial` | UART2 em modo **sniffer** | Chicote de **cartão (ESDUS)**. **Não libera** (bytes desconhecidos). |
+| `esp32doit-gpio` | Pulso 50 ms em GPIO 26 | Plano B: moeda (`Cndr`=0) ou Start, por **optoacoplador**. Sem 220 V. |
 
-Configurações ficam em `platformio.ini` (`build_flags`): `GPIO_RELEASE_PIN`, `GPIO_ACTIVE_LEVEL` (`HIGH` ou `LOW`), `GPIO_PULSE_MS` (20 a 5000), `SERIAL_RX_PIN`, `SERIAL_TX_PIN`, `SERIAL_BAUD`, `SERIAL_FORMAT` (ex.: `SERIAL_8N1`, `SERIAL_8E1`), `SERIAL_INVERT`.
+Configurações ficam em `platformio.ini` (`build_flags`): `GPIO_RELEASE_PIN`, `GPIO_ACTIVE_LEVEL` (`HIGH` ou `LOW`), `GPIO_PULSE_MS` (padrão **50**, faixa 20 a 5000), `SERIAL_RX_PIN`, `SERIAL_TX_PIN`, `SERIAL_BAUD` (9600 é chute), `SERIAL_FORMAT` (ex.: `SERIAL_8N1`, `SERIAL_8E1`), `SERIAL_INVERT`.
 
 ### Driver GPIO: fiação segura
 
@@ -41,7 +41,7 @@ ESP32 GPIO26 --[resistor 330R]--> LED do optoacoplador (ex.: PC817) --> GND
 
 ### Driver serial (sniffer)
 
-Objetivo: **descobrir o sinal no conector da LG** (leitor de cartão / *vend*). O painel está em **`r9Pr` ALL = 100**. Isso é preço de vend da máquina, não protocolo Cicclo. Veja `analise-placa-e-protocolo.md` seção 9.
+Objetivo: **escutar o chicote de cartão** (ESDUS, 6 fios, Tx±/Rx±). O painel está em **`r9Pr` ALL = 100**. Isso é preço de vend da máquina, não protocolo Cicclo. Veja `analise-placa-e-protocolo.md` seções 9 e 10. Baud 9600 **não** veio do manual.
 
 - Usa a UART2: RX no GPIO 16 (TX no GPIO 17, só se `SERIAL_DEBUG_TX=1`). Camada de transporte abstrata (`SerialTransport`), então dá para trocar a UART real por outra implementação ou por um falso nos testes.
 - Em modo sniffer o **TX nem é configurado**: a ESP32 não transmite nada para a máquina.
@@ -78,7 +78,7 @@ O `secrets.h` é versionado de propósito (repositório PRIVADO). Nunca torne o 
    Se o upload travar em "Connecting...", segure o botão **BOOT** até começar.
 5. No monitor serial aparece `placa esp-a4cf120b00ff` (derivada do MAC). Esse é o ID da placa.
 6. Abra o dashboard, menu **Máquinas**: a placa nova aparece **Online**. Clique em **Cadastrar** (nome, loja, tipo) e em **Liberar máquina**. O LED onboard acende por 1,5 s e o estado vira **Confirmado**.
-7. Só depois, com a fiação revisada, grave `esp32doit-gpio`.
+7. Só depois da continuidade/tensões, grave `esp32doit-serial` (sniffer). GPIO só como plano B de moeda/Start.
 
 ## Como funciona
 

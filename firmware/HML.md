@@ -12,8 +12,8 @@ Hoje existem três “modos” (drivers), escolhidos na hora de gravar:
 | Modo (ambiente PlatformIO) | O que faz |
 | --- | --- |
 | `esp32doit-mock` | Só acende o **LED** da placa (~1,5 s). Comece sempre por aqui. |
-| `esp32doit-gpio` | Pulso num pino (padrão GPIO 26) para optoacoplador/relé — **não** ligue 220 V na ESP32 |
-| `esp32doit-serial` | Só **escuta** a serial no conector da LG (sniffer). Ainda **não** libera: não conhecemos os bytes do leitor de cartão. O “canal 100” é o **preço `r9Pr` da máquina**, não um protocolo da Cicclo |
+| `esp32doit-serial` | **Chicote de cartão (ESDUS).** Só **escuta** a serial. Ainda **não** libera: a LG não publica os bytes. O “canal 100” é o **preço `r9Pr`**, não protocolo Cicclo |
+| `esp32doit-gpio` | Plano B: pulso **50 ms** no GPIO 26 (opto) = moeda ou Start — **não** ligue 220 V, 16,5 V nem 12,5 V na ESP32 |
 
 O ID da placa é `esp-` + o MAC (aparece no monitor serial). Tópicos MQTT: `lav/<id>/cmd`, `ack`, `status`, `info`.
 
@@ -90,7 +90,7 @@ Esses valores estão versionados porque o repositório é **privado**. Não publ
 | --- | --- |
 | Pino | GPIO **26** (`GPIO_RELEASE_PIN`) |
 | Nível ativo | `HIGH` (`GPIO_ACTIVE_LEVEL`; use `LOW` em relé “ativo em baixo”) |
-| Duração do pulso | **500** ms (`GPIO_PULSE_MS`; permitido 20–5000) |
+| Duração do pulso | **50** ms (`GPIO_PULSE_MS`; Coin Drop Type 0 da LG; permitido 20–5000) |
 
 ### Driver mock
 
@@ -102,7 +102,7 @@ LED no GPIO **2**, aceso por **1500** ms.
 | --- | --- |
 | RX | GPIO **16** |
 | TX | GPIO **17** (só se ligar envio de debug) |
-| Baud | **9600** |
+| Baud | **9600** (chute; a LG **não** publica) |
 | Formato | `SERIAL_8N1` |
 | Envio de bytes para a máquina | `SERIAL_DEBUG_TX=0` (desligado — deixe assim) |
 
@@ -114,15 +114,19 @@ No computador, o MQTT de desenvolvimento sobe **junto com o backend** (`npm run 
 
 No painel LG o dono faz **SETUP → R9PR (`r9Pr`) → ALL → 100** (desce de 1000 de 100 em 100). Isso é o **preço de vend** de todos os ciclos, documentado pela LG. Cicclo / VMPay / Nayax só pedem que a máquina fique nesse preço.
 
-A ESP32, quando for ligar na máquina, precisa **emular o pagamento no conector LG** (leitor de cartão no ESDUS e/ou pulso de moeda) até a máquina ver crédito **≥ 100**. Não é “falar com a Cicclo”.
+A ESP32 precisa **emular o leitor no chicote de cartão** até a máquina ver crédito **≥ 100**. Não é “falar com a Cicclo”.
 
-**Ainda não medimos o fio:** pode ser serial (RX/TX no ESDUS) ou pulso de moeda. Sem essa medição, o modo serial **só escuta**; o modo GPIO é palpite de pulso/Start. Detalhe em `docs/analise-placa-e-protocolo.md` (seção 9).
+**O que plugar:** o chicote de **cartão** (6 fios / `ESDUS`, serial Tx± Rx±, ~12,5 V). É o que a máquina Card/OPL já deixa pronto (plug-in). Use transceptor isolado; na primeira vez **só RX + GND medido**. Ambiente `esp32doit-serial`.
+
+**O que NÃO plugar ainda:** **220 V**; vivo de **12,5 V** ou **16,5 V** nos pinos da ESP32; TX da ESP32 na máquina; chicote de terceiro com Line/Neutral (ex.: Airwallet fios 1–2).
+
+**Próximo passo seguro:** máquina **desligada da tomada**, mapear pino × cor (continuidade). Só depois medir tensões. Só depois escutar. Sem bytes capturados, **não** inventar UART. Detalhe em `docs/analise-placa-e-protocolo.md` (seções 9 e 10).
 
 ## Passos futuros (planejados)
 
 - MQTT com TLS (`MQTT_USE_TLS 1`, certificado `MQTT_CA_CERT`, em geral porta 8883) e usuário/senha por placa
-- **Medir** se o conector é UART ou pulso. O sniffer só publica hex em `lav/<id>/debug/rx`. **Não inventar quadro serial.**
-- Só então um driver que **credite 100** (leitor virtual ou pulsos), com isolamento de tensão (3,3 V da ESP32 ≠ 5 V / 12 V / RS-485 da máquina)
+- **Medir** pinos e níveis no ESDUS. O sniffer só publica hex em `lav/<id>/debug/rx`. **Não inventar quadro serial.**
+- Só então um driver que **credite 100** no serial (ou pulsos no conector de moeda, se existir), com isolamento (3,3 V da ESP32 ≠ 12,5 V / 16,5 V / RS-422)
 - Relógio e rede estáveis nas lojas reais (NTP já é exigido para aceitar comando)
 
 ## Como fazer uma mudança pequena com segurança
@@ -143,6 +147,6 @@ A ESP32, quando for ligar na máquina, precisa **emular o pagamento no conector 
 
 1. Grave **outra** ESP32 (cada uma ganha ID pelo MAC).
 2. Cadastre no dashboard quando aparecer online.
-3. Só passe do mock para GPIO com técnico, optoacoplador e **sem** 220 V nos pinos da ESP32.
+3. Só passe do mock para **serial (sniffer)** com transceptor isolado, ou GPIO/opto no conector de **moeda**, **sem** 220 V nos pinos da ESP32.
 
 Não apague `COMO-GRAVAR.md`. Não ligue a placa na rede elétrica da máquina neste estágio.

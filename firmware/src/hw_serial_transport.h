@@ -6,7 +6,8 @@
 /**
  * UART2 da ESP32 (Serial2). Em modo sniffer o TX NÃO é configurado (pino -1):
  * a ESP32 nunca transmite para a máquina. O TX só existe com SERIAL_DEBUG_TX=1.
- * Atenção: a UART da ESP32 é TTL 3,3 V. A serial da LG pode ser diferencial (RS-422/485): precisa de transceptor.
+ * Atenção: a UART da ESP32 é TTL 3,3 V. A FAQ da LG descreve Tx+/Tx− e Rx+/Rx− (~12,5 V no vivo):
+ * precisa de transceptor isolado. Não ligue 12,5 V no GPIO. Baud 9600 é chute (manual não publica).
  */
 class HardwareSerialTransport : public lav::SerialTransport {
  public:

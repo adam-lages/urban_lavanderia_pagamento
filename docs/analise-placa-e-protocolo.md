@@ -17,7 +17,7 @@ Legenda: **[Confirmado]** = visto em foto, painel do dono ou fonte oficial. **[H
 5. **O protocolo serial (velocidade, formato, comandos) não é público.** Não achei documento da LG nem da ESD. **[Não encontrado]**
 6. Existe prova de que terceiros conseguem entrar nessa serial: o **Greenwald Pay Plus** fica "no meio" entre a placa e o leitor ESD e libera máquina por celular. **[Confirmado]** (instalação Greenwald)
 7. O “canal 100 a 1000” **não é protocolo da Cicclo**. No display de 4 dígitos, **R9PR = `r9Pr` = Regular Price** (preço de *vend*). O dono programa **SETUP → r9Pr → ALL → 100** (passos de 100). Cicclo, VMPay e Nayax só precisam **acertar esse preço na máquina**. **[Confirmado]** (dono + Master Book LG)
-8. A ESP32 precisa **fingir o pagamento no conector da LG** (leitor de cartão e/ou pulso de moeda) até a máquina ver crédito **≥ 100**. **Ainda não sabemos se o fio é serial ou pulso.** **[Medir]** Plano B: botão Start (seção 6).
+8. Nestas lojas o modelo é **Card/OPL**. O chicote certo da ESP32 é o de **cartão (serial, 6 fios, ~12,5 V + Tx±/Rx±)**, não o de moeda (pulso, 2 fios, ~16,5 V). **Ainda faltam pinagem pino a pino e bytes UART.** Sem isso, a ESP32 **não manda frames**. Plano B: pulso de moeda ou botão Start (seções 6 e 10).
 
 ---
 
@@ -70,7 +70,7 @@ Nota: a Cicclo **não** aparece no manual da LG. O caminho certo da ESP32 é o m
 
 ### 2.1 Confirmado em fontes públicas
 - **FAQ LG Business**: "É possível conectar sistemas centrais de pagamento? Sim, ligando ao chicote do painel de controle." Moeda aceita: Greenwald, ESD, Munzprufer. https://www.lg.com/global/business/commercial-laundry/faqs/
-- **Conectores**: 2 conectores de 8 pinos, iguais por fora. Moeda: 2 fios (16,5 V vivo + terra). Cartão: 6 fios (12,5 V vivo, terra, Tx+/−, Rx+/−, "serial communication"). Mesma fonte.
+- **Conectores**: 2 conectores de 8 pinos, iguais por fora. Moeda: 2 fios (16,5 V vivo + terra). Cartão: 6 fios (12,5 V vivo, terra, Tx+/−, Rx+/−, "serial communication"). Mesma fonte. **A LG não publica o número de cada pino (1–8).**
 - **Manual do dono (washer MFL71671218, modelos CWG27MDQRS/MDORS/MSORS/MSQRS/MDCRS/MSCRS)**: o MDCRS/MSCRS é "**Card/OPL type**". https://cdn.document360.io/3ba378f5-49bb-4d12-b998-373ae9b22725/Images/Documentation/Attachment%201.pdf
 - **Modos de pagamento (manual)**: "PAY" (moeda/cartão) ou "FrEE" (OPL, uso interno sem pagamento). Em OPL a máquina mostra "PUSH" e o ciclo é iniciado pelos botões. Há configuração de **tipo de leitor de cartão** (0 = Greenwald, 1 = ESD) e de **pulso de moeda** (0 = 50 ms para ESD/Greenwald/Munzprufer, 1 = 100 ms Coreia) no manual do secador.
 - **Modo de programação (senha padrão 3000)**: com cartão de serviço, ou botões 1º+3º ao mesmo tempo; 2º+3º alternam números; 4º avança; Start confirma. Permite preço, tipo de produto, tipo de leitor, diagnóstico. Há também "Cycle Kill Card" para encerrar ciclo.
@@ -86,6 +86,9 @@ Nota: a Cicclo **não** aparece no manual da LG. O caminho certo da ESP32 é o m
 - Manual de **serviço** (service manual) completo: não achei versão pública. Usei o manual do dono, que é público.
 - Se o **MDCRS** tem o conector de **moeda** realmente ativo (a LG diz que existem 2 conectores, mas não diz se o de moeda funciona em modelo "Card").
 - Código de país (`Loc1`) **desta** máquina no Brasil. O passo de 100 bate com Coreia/Japão na tabela pública; não achamos “Brasil” nessa lista.
+- **Pinagem oficial pino 1–8** (qual pino é 12,5 V, GND, Tx+, Tx−, Rx+, Rx−). Só a lista de sinais, sem ordem. **[Não encontrado no owner/service/installation da LG]**
+- Baud, paridade e frames UART do leitor ESD. **[Não encontrado]**
+- Terceiro conector só de “central pay”: a FAQ manda ligar no **mesmo chicote do painel**. Não há pinagem extra. **[Confirmado o texto; sem diagrama]**
 
 ---
 
@@ -99,7 +102,7 @@ Nota: a Cicclo **não** aparece no manual da LG. O caminho certo da ESP32 é o m
 | D | **API de nuvem LG** | Backend chama API da LG | Médio: contrato, NDA, custo; depende de comando de start | Médio | Não sabemos se existe comando |
 | E | **Manter a Cicclo** | Já funciona | – | – | Referência |
 
-Avaliação honesta: **B é o mais simples se funcionar; A é o mais flexível e o "certo", mas exige medição; C é o plano B garantido** (inclusive vale como contingência manual). D só depende de contrato com a LG.
+Avaliação honesta para **esta** loja (modelo Card): o caminho **A (serial no chicote de cartão)** é o que a LG e os kits de cartão descrevem. **B** só entra se existir o conector de 2 fios/16,5 V e o SETUP estiver em tipo moeda. **C** continua sendo o plano B mecânico. D só depende de contrato com a LG.
 
 ---
 
@@ -238,8 +241,9 @@ Ordem: do menos arriscado ao mais. **Pare em qualquer dúvida.** Uma pessoa segu
 | A Cicclo usa essa serial? | Hipótese (não visto de forma clara nas fotos) |
 | Níveis elétricos (RS-422? TTL?) | Não medido |
 | Baud e protocolo | Desconhecido |
+| Pinagem pino 1–8 (cartão e moeda) | **Não publicada pela LG** |
 | “Canal” 100–1000 | **É o preço `r9Pr` da LG**, passos de 100. Não é protocolo Cicclo. **[Confirmado]** |
-| Sinal elétrico (UART vs pulso) | **Não medido** |
+| Chicote desta loja (Card) | **Serial de cartão** (FAQ + tipo MDCRS). Pulso = **outro** conector. **[Confirmado o tipo; pinos [Medir]]** |
 | API de nuvem LG tem comando de iniciar? | Desconhecido |
 | Pulso de moeda funciona no modelo Card? | Desconhecido |
 | Lógica da placa é isolada da rede? | Desconhecido (assumir que não) |
@@ -274,11 +278,75 @@ O dinheiro real (reais no app) **não** precisa ser 100. O 100 é só a conta in
 ### 9.3 O que isso muda para a ESP32
 - **Fazer:** ocupar o lugar do leitor/moedeiro no conector da **LG** (`ESDUS` e/ou moeda) e creditar **100** quando o MQTT mandar liberar.
 - **Não fazer:** procurar um “protocolo Cicclo”. Cicclo, VMPay e Nayax são só clientes desse *vend* da LG.
-- **Ainda não sabemos o sinal elétrico.** Fotos mostram RX/TX no ESDUS, o que **aponta** para serial de cartão. A FAQ da LG também descreve pulso de moeda em outro conector. Sem osciloscópio: **não dá para escolher A vs B**. Sem frames: o driver serial **não envia bytes**.
+- **Sinal no chicote de cartão:** serial (Tx±/Rx±), não pulso de moeda. O pulso (50 ms) é o **outro** conector, de 2 fios. Sem osciloscópio ainda **não** sabemos tensão real nem baud. Sem frames: o driver serial **não envia bytes**.
 - O campo `channel` 100–1000 no MQTT/firmware deve ser lido como **preço de vend**, em passos de 100, não como canal de rádio.
 
 ### 9.4 O que continua em aberto
-- UART diferencial vs TTL vs pulso de moeda.
+- UART diferencial vs TTL (a FAQ fala Tx+/Tx−, Rx+/Rx− — isso **parece** diferencial, mas não foi medido).
 - Baud, formato e qualquer comando serial.
+- Qual pino 1–6 do `ESDUS_OUT_PIN2` é cada sinal.
 - Se o modelo Card desta loja ainda aceita pulso de moeda.
 - `Loc1` (país) gravado nestas placas.
+
+## 10. Chicote de pagamento (cartão vs moeda vs central) — o que plugar
+
+Pesquisa em FAQ LG Commercial, owner Giant-C (MFL71671218 / CWG27MDCRS Card/OPL), owner/secador RV1329, Master Book 2018, e guias de terceiros (Greenwald Pay Plus LG, Laundroworks serial, Airwallet Giant-C, PayRange C5). **Nenhum manual de serviço público mostrou o esquema pino a pino.**
+
+### 10.1 Três nomes, dois conectores
+
+A LG descreve **dois** conectores de **8 pinos, iguais por fora**, no chicote do painel. “Central Payment System” **não** ganha um terceiro conector: a FAQ manda ligar **no mesmo chicote**.
+
+| Nome | Como reconhecer | Sinais publicados | Como a máquina cobra `r9Pr` |
+|---|---|---|---|
+| **Cartão / leitor ESD** | **6 fios** no conector de 8 pinos | **12,5 V** vivo, terra, **Tx+ Tx− Rx+ Rx−** (“serial communication”) | Crédito serial ≥ preço (hoje 100) |
+| **Moeda / coin drop** | **2 fios** no outro conector de 8 pinos | **16,5 V** vivo e terra | Pulso: tipo `Cndr` **0 = 50 ms** (ESD, Greenwald, Munzprufer) ou **1 = 100 ms** (Coreia). Cada pulso soma `Co1` |
+| **Pagamento central** | Mesmo chicote do painel | **Não publicado à parte** | Terceiros usam **serial de cartão** (Greenwald, Laundroworks) **ou** pulso de moeda (Airwallet). A LG não diz qual |
+
+Nesta loja: lavadora **CWG27MDCRS / FH069FD6F = Card/OPL**. Painel com serigrafia **`ESDUS_OUT_PIN2` / `ESDUS_IN_PIN1`** e RX/TX. Isso é o caminho de **cartão serial**, não o de moeda. Secadora **CDG27MUCES / RV1329C7P**: mesma família Giant-C; a FAQ de conectores é a mesma. O código **CDG27MUCES** não apareceu no owner que abri (vi CDG27R* card type); trate como Giant-C até conferir o painel.
+
+**“MDC”:** no código **CWG27MDCRS**, **C** = tipo cartão (manual: Card/OPL). **Não** é o controle Alliance/Speed Queen chamado MDC (pulso de start de outra marca). Não use pinagem Alliance nesta máquina.
+
+### 10.2 Pinagem — o que é público e o que não é
+
+**A LG não numerou os pinos 1–8.** Só listou os sinais.
+
+O que dá para usar na prática:
+
+| Pino / fio | Cartão (6 fios) | Moeda (2 fios) | Fonte |
+|---|---|---|---|
+| Vivo | ~**12,5 V** | ~**16,5 V** | FAQ LG |
+| Terra | GND | GND | FAQ LG |
+| Dados | Tx+, Tx−, Rx+, Rx− | (não há) | FAQ LG |
+| Pulso | (não há) | o par vivo/GND (o drop “abre/fecha” o pulso) | Owner: Coin Drop Type 50/100 ms |
+
+Terceiros (não é manual LG; **não copiar cego**):
+
+- Airwallet no Giant-C (caminho **moeda**): PIN **6** vermelho/laranja e PIN **4** marrom no conector de coin drop. O chicote Airwallet ainda tem fios **1 e 2 = 100–240 V CA** — isso é alimentação do **leitor Airwallet**, não da ESP32. **Nunca ligue esses fios na ESP32.**
+- Laundroworks: cabo de **6 fios** no conector **preto atrás do display**, máquina em **Vend = Card / Pay**.
+- Greenwald Pay Plus (kit LG 4116-001): entra **no chicote do leitor de cartão** (serial), no meio entre placa e leitor.
+- PayRange C5 (controlador “C-series”, outro desenho de conectores): pulso no e-Suds **ou** serial no “6-wire 8-pin”. Só como prova de que as duas vias existem na família LG; **não** é o diagrama do EBR8344SY.
+
+Fotos desta loja: `ESDUS_OUT_PIN2` é branco de **6 posições**. Combine com o conector de **cartão**. A ordem 1–6 na serigrafia **ainda precisa de foto nítida + continuidade**.
+
+### 10.3 O que plugar / o que não plugar (ESP32)
+
+A máquina **já tem chicote** esperando o cabo (plug-in). Esse chicote, no modelo Card, é o de **leitor**. A ESP32 **não** vai nele direto: 12,5 V e serial diferencial **queimam** GPIO 3,3 V.
+
+| Fazer | Não fazer ainda |
+|---|---|
+| Identificar o conector de **6 fios / ESDUS** (cartão) | Ligar **220 V**, motor, aquecedor ou qualquer fio de rede na ESP32 |
+| Com a máquina **desligada da tomada**, mapear pino × cor × continuidade até GND | Ligar **12,5 V** ou **16,5 V** em GPIO, RX, TX ou 3V3 |
+| Só depois, **medir tensões** nos pinos (preto no terra da placa) | Cortar ou soldar o módulo Cicclo sem ler o contrato |
+| Gravador: ambiente **`esp32doit-serial`** (só escuta), transceptor **isolado** RS-422/485, **só RX** no início | Inventar bytes UART ou ligar TX na máquina |
+| USB 5 V na ESP32 (fonte **própria**) | Alimentar a ESP32 pelo 12,5 V da LG sem medir corrente |
+| GPIO/opto só se for o **conector de moeda** (2 fios) e SETUP em tipo moeda; pulso **50 ms** | Usar pulso de 500 ms (não é o valor da LG) nem o chicote Airwallet com 220 V |
+
+### 10.4 Firmware agora: muda código de liberação? **Não**
+
+Os manuais **separam** pulso de moeda e serial de cartão. O driver padrão **desta loja** é o **serial (sniffer)**. Isso **já existe**. O que **não** existe (e o manual não entrega) são os **bytes**. Por isso:
+
+- **Não** implementar `buildReleaseFrame()`. Continua recusando com `serial_protocol_unknown`.
+- Baud **9600 8N1** no `platformio.ini` é **chute de compilação**, não dado da LG. Ajuste só depois de medir.
+- O driver GPIO (opto, GPIO **26**) fica como plano B de **moeda/Start**. Duração padrão alinhada ao manual: **50 ms** (`Cndr` = 0).
+
+Próximo passo seguro: **Etapa 1 da seção 5** (tomada fora, continuidade). Só então tensões. Só então sniffer. TX/crédito só com captura e aprovação.

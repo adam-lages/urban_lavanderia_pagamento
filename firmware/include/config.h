@@ -22,7 +22,7 @@
 #define GPIO_ACTIVE_LEVEL HIGH  // use LOW para módulo de relé "ativo em nível baixo"
 #endif
 #ifndef GPIO_PULSE_MS
-#define GPIO_PULSE_MS 500
+#define GPIO_PULSE_MS 50  // LG Coin Drop Type 0: 50 ms (ESD/Greenwald/Munzprufer)
 #endif
 #define GPIO_PULSE_MIN_MS 20
 #define GPIO_PULSE_MAX_MS 5000
@@ -41,7 +41,7 @@
 #define SERIAL_TX_PIN 17
 #endif
 #ifndef SERIAL_BAUD
-#define SERIAL_BAUD 9600
+#define SERIAL_BAUD 9600  // chute: a LG não publica baud
 #endif
 #ifndef SERIAL_FORMAT
 #define SERIAL_FORMAT SERIAL_8N1
