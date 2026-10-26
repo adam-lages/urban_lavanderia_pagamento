@@ -8,6 +8,8 @@
     "dev:backend": "npm -w @lav/backend run dev",
     "dev:mqtt": "npm -w @lav/backend run mqtt",
     "dev:dashboard": "npm -w @lav/dashboard run dev",
+    "dashboard": "npm -w @lav/dashboard run dev",
+    "start": "npm -w @lav/dashboard run start",
     "dev:simulator": "npm -w @lav/simulator run start",
     "test": "npm -w @lav/backend run test && npm -w @lav/simulator run test && npm -w @lav/dashboard run test",
     "typecheck": "npm -w @lav/protocol run typecheck && npm -w @lav/backend run typecheck && npm -w @lav/simulator run typecheck && npm -w @lav/dashboard run typecheck",

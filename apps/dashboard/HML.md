@@ -1,5 +1,19 @@
 # Guia HML — Dashboard (painel web)
 
+> **Você precisa estar na branch `dev`.**  
+> O comando `npm run dev:dashboard` **não existe** em `main` (lá só tem o README).  
+> Rode **na raiz do repositório** (`urban_lavanderia_pagamento`), não em outra pasta.
+
+```bash
+git checkout dev
+git pull
+npm install
+npm run dev:dashboard
+```
+
+Equivalentes na **raiz**: `npm start` ou `npm run dashboard`.  
+Se o terminal já estiver em `apps/dashboard`, use `npm run dev` (sobe o Vite).
+
 Este arquivo explica o **painel de computador** do projeto, em linguagem simples.  
 Pasta real no repositório: `apps/dashboard/` (não existe uma pasta `dashboard/` na raiz).
 
@@ -88,6 +102,7 @@ Na raiz: `docker compose up --build` — dashboard na mesma URL **http://localho
 
 | Sintoma | O que checar |
 | --- | --- |
+| `Missing script: "dev:dashboard"` | Você **não está na branch `dev`**. Na raiz: `git checkout dev && git pull` e rode de novo. |
 | `npm: command not found` ou Node antigo | Instale Node **22**. Confira com `node -v`. |
 | Erro de workspace / pacote `@lav/dashboard` | Você rodou o comando **fora da raiz**. Suba um nível e use `npm install` + `npm run dev:dashboard`. |
 | Yarn / `yarn.lock` | Não use. Apague qualquer `yarn.lock` acidental. Use `npm install`. |
