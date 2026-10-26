@@ -11,9 +11,21 @@ Tecnologias de hoje: Node.js, Fastify (API HTTP), Postgres (banco) e um broker M
 
 O contrato dos recados MQTT (nomes dos tópicos) está em `packages/protocol`. O simulador de placa, para testar sem hardware, está em `apps/simulator`.
 
-## Como rodar e onde mexer
+## Como rodar no localhost (passos iniciais)
 
-### Tudo junto (Docker)
+Isto é um servidor **Node.js**. Use **npm**, não yarn.
+
+**Por quê npm?** Na raiz existem `package.json` (workspaces) e `package-lock.json`. O `Dockerfile` roda `npm ci`; o CI instala com npm. **Não há `yarn.lock`.** Fique no npm.
+
+### O que precisa ter
+
+- **Node.js 22** (README: 22+; imagem Docker `node:22-slim`; CI: Node 22).
+- **npm** (vem com o Node).
+- **Docker** (o jeito mais simples de ter **Postgres 16** na porta **5432** e **Mosquitto** MQTT na porta **1883**). Sem esses dois, o `npm run dev:backend` não sobe: ele precisa do banco e do broker.
+
+Não rode `npm install` só dentro de `apps/backend/`. Sempre na **raiz** do repositório.
+
+### Opção A — Tudo junto (Docker)
 
 Na raiz:
 
@@ -21,22 +33,75 @@ Na raiz:
 docker compose up --build
 ```
 
-- API: **http://localhost:3000** (teste: `/health`)
-- Dashboard: http://localhost:5173
-- Banco: porta **5432**
-- MQTT: porta **1883**
+| Serviço | Endereço |
+| --- | --- |
+| API (backend) | **http://localhost:3000** (teste: `/health`) |
+| Dashboard | http://localhost:5173 |
+| Postgres | porta **5432** (usuário/senha/banco: `lav` / `lav` / `lav`) |
+| MQTT (Mosquitto) | porta **1883** (sem login no modo de desenvolvimento) |
 
 O backend aplica as tabelas sozinho e, se o banco estiver vazio, cria a **loja demo**.
 
-### Só o backend no computador (Node 22+)
+### Opção B — Backend no Node (Postgres e MQTT no Docker)
 
-Suba Postgres e Mosquitto (`docker compose up postgres mosquitto` serve) e, na raiz:
+1. Suba só o banco e o broker:
+
+```bash
+docker compose up postgres mosquitto
+```
+
+2. Instale (uma vez, na raiz):
 
 ```bash
 npm install
-npm run dev:backend
-npm -w @lav/backend run seed    # só se quiser a loja demo
 ```
+
+3. Suba a API:
+
+```bash
+npm run dev:backend
+```
+
+Equivalente: `npm -w @lav/backend run dev`. A API escuta em **http://localhost:3000**.
+
+4. (Opcional) Loja demo, se o banco já tinha dados vazios sem seed:
+
+```bash
+npm -w @lav/backend run seed
+```
+
+### Variáveis
+
+O backend lê `process.env`. **Não há `dotenv` no código**: se você não exportar nada, valem os padrões de `src/config.ts` (iguais ao `.env` da raiz). O `docker compose` **lê** o `.env` sozinho.
+
+As principais no localhost:
+
+| Variável | Padrão | Para quê |
+| --- | --- | --- |
+| `PORT` | `3000` | porta HTTP da API |
+| `DATABASE_URL` | `postgres://lav:lav@localhost:5432/lav` | Postgres |
+| `MQTT_URL` | `mqtt://localhost:1883` | broker |
+| `ADMIN_TOKEN` | `dev-admin-token` | painel e rotas de admin |
+| `POS_TOKEN` | `dev-pos-token` | rotas da maquininha (teste) |
+
+Lista completa na seção abaixo.
+
+Para testar a placa **sem hardware**, depois do backend: `npm run dev:simulator` (precisa do Mosquitto).
+
+### Deu errado?
+
+| Sintoma | O que checar |
+| --- | --- |
+| Node / npm não encontrado | Instale Node **22**. `node -v` deve começar com `v22`. |
+| Erro de workspace `@lav/backend` | Comando fora da raiz. Volte para a pasta do `package-lock.json`. |
+| Yarn | Não use. Este repo trava no npm. |
+| `ECONNREFUSED` no Postgres (`5432`) | Postgres não está no ar. `docker compose up postgres`. |
+| Falha ao conectar MQTT (`1883`) | Mosquitto parado. `docker compose up mosquitto`. |
+| Porta 3000 ocupada | Outro backend já está rodando (talvez o Docker). Pare um dos dois. |
+| `/health` não responde | Espere o migrate terminar; leia o log `backend ouvindo na porta 3000`. |
+| Dashboard “Não autorizado” | Token do navegador ≠ `ADMIN_TOKEN`. Reinicie o backend depois de mudar o `.env`. |
+
+## Onde mexer no código
 
 Arquivos mais comuns:
 

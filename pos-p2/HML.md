@@ -1,9 +1,11 @@
 # Guia HML — App P2 da Stone (rascunho)
 
-**Este app ainda não existe neste repositório.** Não há pasta Kotlin, Android Studio nem APK.  
+**Este app ainda não existe neste repositório.** Não há código para rodar, pasta Kotlin, Android Studio nem APK.  
 Esta pasta (`pos-p2/`) só guarda o guia para quando o app for criado. Nada aqui instala nada na maquininha.
 
-(Por que não `apps/p2/`? O monorepo trata `apps/*` como pacote npm. Uma pasta vazia ali quebraria `npm install`. Quando o app nascer, ele será Android/Kotlin, não um workspace Node.)
+**Não rode `npm install` nem `yarn` aqui.** Não há `package.json` nesta pasta. Quando o app existir, será **Android / Kotlin** (maquininha Stone P2), **não** um site Node.
+
+(Por que não `apps/p2/`? O monorepo trata `apps/*` como pacote npm. Uma pasta vazia ali quebraria `npm install`. O app futuro continua **fora** dos workspaces Node.)
 
 ## O que vai ser este projeto
 
@@ -20,14 +22,26 @@ Linguagem prevista: **Kotlin** nativo. Isso ainda **não** foi escrito. Não inv
 
 O backend já tem um esqueleto `stone_deeplink` que tenta ler o JSON de volta do deeplink. Os nomes dos campos **ainda não foram validados** no sandbox da Stone.
 
-## Como “rodar” hoje
+## Como “rodar” no localhost (hoje)
 
-Não dá. Não existe código neste diretório.
+**Não dá.** Não existe código neste diretório para instalar, compilar ou abrir no navegador.
 
-O que você pode testar **sem** a P2:
+- **Não** use `npm install` / `npm run dev` / yarn nesta pasta — isso é do dashboard e do backend (`apps/dashboard`, `apps/backend`), na **raiz** do repo.
+- **Não** espere uma URL tipo `http://localhost:5173` daqui. Essa porta é o painel React.
+- Quando houver app, os passos serão: Android Studio, projeto Kotlin, SDK Stone, instalar na P2 — e este arquivo será atualizado.
 
-- Backend + dashboard + simulador (veja `apps/backend/HML.md` e o README da raiz).
+### O que você pode testar **sem** a P2 (é o backend, não esta pasta)
+
+- Backend + dashboard + simulador (veja `apps/backend/HML.md`, `apps/dashboard/HML.md` e o README da raiz).
 - Um pagamento **falso** com `provider: "simulated"` e o token `POS_TOKEN` (valor atual: `dev-pos-token`). Isso **não** é a Stone.
+
+### Deu errado?
+
+| Sintoma | O que isso significa |
+| --- | --- |
+| Pasta vazia / só este `HML.md` | Esperado. O app ainda não foi escrito. |
+| Tentou `npm install` aqui | Pasta errada. Node/npm é na raiz, para backend e dashboard. |
+| Procurou yarn / Vite / porta 5173 neste app | Isso é o painel React, não a P2. |
 
 Rotas que o app P2 deverá usar no futuro (já existem no backend):
 

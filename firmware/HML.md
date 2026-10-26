@@ -17,12 +17,47 @@ Hoje existem três “modos” (drivers), escolhidos na hora de gravar:
 
 O ID da placa é `esp-` + o MAC (aparece no monitor serial). Tópicos MQTT: `lav/<id>/cmd`, `ack`, `status`, `info`.
 
-## Como rodar / onde mexer
+## Como “rodar” no computador / na placa (passos iniciais)
 
-1. Leia os avisos de 220 V em `COMO-GRAVAR.md` e no `README.md` desta pasta.
-2. Confira Wi-Fi e MQTT em `firmware/include/secrets.h`.
-3. Grave o modo mock (comandos em `COMO-GRAVAR.md`).
-4. No dashboard, menu **Máquinas**, cadastre a placa quando ela ficar **Online** e teste **Liberar** (o LED deve acender).
+**Isto não é um projeto npm.** Não rode `npm install` nem `yarn` nesta pasta. Não há `package.json` no firmware.
+
+O código é C++ para **ESP32**, com **PlatformIO** (caminho principal) ou **Arduino IDE**. O passo a passo completo de gravação, USB, botão BOOT e modo mock está em **[`COMO-GRAVAR.md`](COMO-GRAVAR.md)** — use aquele arquivo para gravar. Aqui vai só o essencial para não ficar perdido.
+
+### O que precisa ter
+
+- Uma placa **ESP32 DOIT DevKit V1** e cabo USB.
+- **PlatformIO** (`pip install platformio`, ou a extensão no VS Code) **ou** Arduino IDE 2 (mais trabalhoso; detalhes em `COMO-GRAVAR.md`).
+- Wi-Fi que a placa alcance (SSID/senha em `include/secrets.h`).
+- Backend + Mosquitto no ar **na mesma rede** (veja `apps/backend/HML.md`). Na placa, **não use `localhost`** como MQTT: `localhost` na ESP32 é ela mesma.
+
+Para testar o **contrato** sem placa: na raiz do repo, `npm run dev:simulator` (isso é Node, mas é o simulador em `apps/simulator`, não este firmware).
+
+### Passos curtos (PlatformIO, modo mock = só o LED)
+
+1. Leia os avisos de 220 V em `COMO-GRAVAR.md` e no `README.md` desta pasta. Primeiro teste: **só USB**, sem fio na máquina.
+2. Confira Wi-Fi e MQTT em `firmware/include/secrets.h` (`WIFI_SSID`, `WIFI_PASSWORD`, `MQTT_HOST` = IP do PC, porta **1883**).
+3. Grave o mock:
+
+```bash
+cd firmware
+pio run -e esp32doit-mock -t upload
+pio device monitor
+```
+
+4. No serial (115200) aparece o ID (`placa esp-…`). No dashboard, menu **Máquinas**, cadastre quando ficar **Online** e teste **Liberar** (o LED deve acender ~1,5 s).
+
+Arduino IDE: mesma ideia (placa DOIT ESP32 DEVKIT V1, bibliotecas PubSubClient e ArduinoJson) — siga a seção 4 de `COMO-GRAVAR.md`. Prefira PlatformIO neste repo (`platformio.ini`).
+
+### Deu errado?
+
+| Sintoma | O que checar |
+| --- | --- |
+| `npm install` aqui | Pasta errada. Firmware não usa npm. |
+| `pio: command not found` | Instale PlatformIO (`pip install platformio` ou a extensão). |
+| `Connecting...` e não grava | Segure o botão **BOOT** na placa; confira cabo/driver CP2102 ou CH340; no Linux, grupo `dialout`. |
+| Wi-Fi não conecta | SSID/senha em `secrets.h` e **grave de novo**. A rede precisa ser 2,4 GHz (ESP32 clássica). |
+| MQTT / placa offline no dashboard | `MQTT_HOST` tem que ser o IP do PC na LAN, não `localhost`. Mosquitto na porta 1883 (`docker compose up mosquitto`). PC e placa na mesma rede. |
+| Liberar não acende o LED | Backend no ar? Token no dashboard? Gravou o ambiente `esp32doit-mock`? |
 
 Arquivos de configuração (pode editar estes; o pedido deste guia é **não** mudar o restante do firmware):
 
