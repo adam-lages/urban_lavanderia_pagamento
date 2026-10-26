@@ -20,6 +20,15 @@ infra/mosquitto     config do broker para desenvolvimento
 - [Análise da placa e do protocolo](docs/analise-placa-e-protocolo.md)
 - [Fotos da placa](docs/fotos-placa/) (8 imagens usadas na análise)
 
+## Guias HML
+
+Textos simples (configuração de hoje + o que vem depois). O app da maquininha **ainda não existe**; o quarto arquivo é só rascunho.
+
+- [Dashboard (painel React)](apps/dashboard/HML.md)
+- [Backend (API)](apps/backend/HML.md)
+- [Firmware ESP32](firmware/HML.md) (gravação passo a passo: [COMO-GRAVAR.md](firmware/COMO-GRAVAR.md))
+- [App P2 da Stone (rascunho)](pos-p2/HML.md)
+
 ## Como rodar
 
 ### Opção 1 — Docker (tudo junto)
