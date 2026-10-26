@@ -12,6 +12,8 @@ apps/simulator      simulador de ESP32 via MQTT
 infra/mosquitto     config do broker para desenvolvimento
 ```
 
+> **Repositório PRIVADO com segredos versionados** (decisão do dono): `.env` (tokens e senhas do backend/MQTT/Postgres) e `firmware/include/secrets.h` (Wi-Fi). Os valores são os padrão de desenvolvimento. **Nunca torne este repositório público sem antes rotacionar todas as credenciais** (e limpar o histórico do git).
+
 ## Documentação
 
 - [Plano técnico](docs/plano-tecnico.md)
@@ -42,7 +44,7 @@ npm run dev:simulator    # sobe esp-m1..esp-m4
 npm run dev:dashboard    # http://localhost:5173
 ```
 
-Variáveis do backend (`apps/backend/src/config.ts`): `DATABASE_URL`, `MQTT_URL`, `ADMIN_TOKEN`, `POS_TOKEN`,
+Os valores padrão estão no `.env` da raiz (versionado; o `docker compose` o lê sozinho). Variáveis do backend (`apps/backend/src/config.ts`): `DATABASE_URL`, `MQTT_URL`, `ADMIN_TOKEN`, `POS_TOKEN`,
 `COMMAND_TTL_SECONDS` (60), `ACK_TIMEOUT_SECONDS` (60), `REQUIRE_DEVICE_ONLINE` (true), `ENABLE_SIMULATED_PAYMENTS` (true).
 Simulador: `MQTT_URL`, `DEVICE_IDS`, `PULSE_MS`, `DROP_ACKS=true` (não confirma), `FAIL_ALL=true` (rejeita tudo).
 

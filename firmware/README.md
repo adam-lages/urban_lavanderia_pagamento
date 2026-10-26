@@ -57,15 +57,15 @@ mosquitto_sub -h <broker> -t 'lav/+/debug/rx' -v
 
 ## Credenciais (nada de senha no git)
 
-1. `cp include/secrets.example.h include/secrets.h`
-2. Edite `include/secrets.h`: `WIFI_SSID` (padrão `Urban_Lavanderia_Setup`), `WIFI_PASSWORD`, e `MQTT_HOST`/`MQTT_PORT`/`MQTT_USER`/`MQTT_PASS`.
+1. `include/secrets.h` já está versionado com os valores atuais (repositório privado). Edite-o se precisar mudar:
+2. Campos: `WIFI_SSID` (padrão `Urban_Lavanderia_Setup`), `WIFI_PASSWORD`, e `MQTT_HOST`/`MQTT_PORT`/`MQTT_USER`/`MQTT_PASS`.
 
-O `secrets.h` está no `.gitignore`. Nunca o versione. Para usar TLS no MQTT, defina `MQTT_USE_TLS 1` e `MQTT_CA_CERT`.
+O `secrets.h` é versionado de propósito (repositório PRIVADO). Nunca torne o repositório público sem rotacionar as credenciais. Para usar TLS no MQTT, defina `MQTT_USE_TLS 1` e `MQTT_CA_CERT`.
 
 ## Gravar na ESP32 (passo a passo)
 
 1. Instale o PlatformIO (`pip install platformio` ou a extensão do VS Code).
-2. Crie o `secrets.h` (acima). O broker MQTT precisa estar acessível pela rede Wi-Fi (veja o README da raiz: `docker compose up`). Use o IP do computador/servidor em `MQTT_HOST`, não `localhost`.
+2. Confira o `secrets.h` (acima). O broker MQTT precisa estar acessível pela rede Wi-Fi (veja o README da raiz: `docker compose up`). Use o IP do computador/servidor em `MQTT_HOST`, não `localhost`.
 3. Conecte a ESP32 por USB (se não aparecer, instale o driver CP2102/CH340 e adicione seu usuário ao grupo `dialout` no Linux).
 4. Grave começando pelo mock:
    ```bash

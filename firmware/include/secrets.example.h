@@ -1,5 +1,4 @@
-// Copie para include/secrets.h (arquivo ignorado pelo git) e preencha.
-// NUNCA versione o secrets.h real.
+// Modelo sem segredos. O secrets.h real está versionado (repo privado).
 #pragma once
 
 #define WIFI_SSID "Urban_Lavanderia_Setup"

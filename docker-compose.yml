@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: lav
-      POSTGRES_PASSWORD: lav
-      POSTGRES_DB: lav
+      POSTGRES_USER: ${POSTGRES_USER:-lav}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lav}
+      POSTGRES_DB: ${POSTGRES_DB:-lav}
     ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
@@ -23,10 +23,10 @@ services:
     build: .
     command: sh -c "npm -w @lav/backend run seed && npm -w @lav/backend run start"
     environment:
-      DATABASE_URL: postgres://lav:lav@postgres:5432/lav
+      DATABASE_URL: postgres://${POSTGRES_USER:-lav}:${POSTGRES_PASSWORD:-lav}@postgres:5432/${POSTGRES_DB:-lav}
       MQTT_URL: mqtt://mosquitto:1883
-      ADMIN_TOKEN: dev-admin-token
-      POS_TOKEN: dev-pos-token
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token}
+      POS_TOKEN: ${POS_TOKEN:-dev-pos-token}
     ports: ["3000:3000"]
     depends_on:
       postgres: { condition: service_healthy }

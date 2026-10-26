@@ -1,6 +1,4 @@
 node_modules
 dist
-.env
 *.log
-firmware/include/secrets.h
 firmware/.pio
