@@ -2,7 +2,7 @@
 
 Sistema próprio de pagamento/liberação para as lavanderias de autosserviço (substitui a Cicclo).
 Este repositório traz a **fundação da Fase 1 que não depende de hardware**: backend, dashboard e um
-simulador de placa ESP32. O plano completo está no documento "plano técnico" do projeto.
+simulador de placa ESP32. O plano completo está em [`docs/plano-tecnico.md`](docs/plano-tecnico.md).
 
 ```
 packages/protocol   contrato MQTT (tópicos e mensagens), compartilhado
@@ -11,6 +11,12 @@ apps/dashboard      painel web React (Vite)
 apps/simulator      simulador de ESP32 via MQTT
 infra/mosquitto     config do broker para desenvolvimento
 ```
+
+## Documentação
+
+- [Plano técnico](docs/plano-tecnico.md)
+- [Análise da placa e do protocolo](docs/analise-placa-e-protocolo.md)
+- [Fotos da placa](docs/fotos-placa/) (8 imagens usadas na análise)
 
 ## Como rodar
 
