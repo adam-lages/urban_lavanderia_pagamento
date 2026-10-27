@@ -79,6 +79,19 @@ describe("página Máquinas", () => {
     expect(liberar[1].hasAttribute("disabled")).toBe(true);
   });
 
+  it("filtra pela aba de conexão e pela busca", async () => {
+    const user = userEvent.setup();
+    renderApp("/maquinas", { token: "dev-admin-token" });
+    await screen.findByText("Lavadora 1");
+    await user.click(screen.getByRole("tab", { name: /Sem conexão/ }));
+    expect(screen.queryByText("Lavadora 1")).toBeNull();
+    expect(screen.getByText("Secadora 2")).toBeTruthy();
+    await user.click(screen.getByRole("tab", { name: /Todas/ }));
+    await user.type(screen.getByRole("textbox", { name: "Buscar máquina" }), "esp-1");
+    expect(screen.getByText("Lavadora 1")).toBeTruthy();
+    expect(screen.queryByText("Secadora 2")).toBeNull();
+  });
+
   it("só chama a API de liberação depois da confirmação", async () => {
     const user = userEvent.setup();
     renderApp("/maquinas", { token: "dev-admin-token" });

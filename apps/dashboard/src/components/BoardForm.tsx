@@ -1,8 +1,23 @@
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import { useState } from "react";
 import { api, type Board, type Kind } from "../api";
 import { useStores } from "../hooks";
 
-export function BoardForm({ board, onSaved, onCancel }: { board: Board; onSaved: () => void; onCancel: () => void }) {
+interface Props {
+  board: Board;
+  onSaved: () => void;
+  onCancel: () => void;
+}
+
+export function BoardForm({ board, onSaved, onCancel }: Props) {
   const { stores } = useStores();
   const [name, setName] = useState(board.name ?? "");
   const [storeId, setStoreId] = useState(board.storeId ?? "");
@@ -27,26 +42,38 @@ export function BoardForm({ board, onSaved, onCancel }: { board: Board; onSaved:
   };
 
   return (
-    <div className="board-form">
-      <label>Nome<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Lavadora 3" /></label>
-      <label>Loja
-        <select value={storeId} onChange={(e) => setStoreId(e.target.value)}>
-          <option value="">Escolha…</option>
-          {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-      </label>
-      <label>Tipo
-        <select value={kind} onChange={(e) => setKind(e.target.value as Kind | "")}>
-          <option value="">Escolha…</option>
-          <option value="WASHER">Lava</option>
-          <option value="DRYER">Seca</option>
-        </select>
-      </label>
-      <div className="dialog-actions">
-        <button type="button" className="ghost" onClick={onCancel}>Cancelar</button>
-        <button type="button" disabled={saving} onClick={() => void save()}>{saving ? "Salvando…" : "Salvar"}</button>
-      </div>
-      {error && <span className="error">{error}</span>}
-    </div>
+    <Dialog open onClose={onCancel} fullWidth maxWidth="sm" aria-labelledby="board-form-title">
+      <DialogTitle id="board-form-title">{board.registered ? "Editar máquina" : "Cadastrar máquina"}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={3} sx={{ pt: 1 }}>
+          <TextField label="Placa" value={board.deviceId} disabled />
+          <TextField label="Nome" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Lavadora 3" />
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField select label="Loja" value={storeId} onChange={(e) => setStoreId(e.target.value)}>
+              <MenuItem value="">Escolha…</MenuItem>
+              {stores.map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  {s.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField select label="Tipo" value={kind} onChange={(e) => setKind(e.target.value as Kind | "")}>
+              <MenuItem value="">Escolha…</MenuItem>
+              <MenuItem value="WASHER">Lava</MenuItem>
+              <MenuItem value="DRYER">Seca</MenuItem>
+            </TextField>
+          </Stack>
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button variant="outlined" color="inherit" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button variant="contained" color="inherit" disabled={saving} onClick={() => void save()}>
+          {saving ? "Salvando…" : "Salvar"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

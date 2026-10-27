@@ -1,36 +1,44 @@
-import { useCallback, useEffect, useState } from "react";
-import { api, kindLabel, type Board, type Command } from "../api";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TablePagination from "@mui/material/TablePagination";
+import TableRow from "@mui/material/TableRow";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { api, type Board, type Command } from "../api";
 import { BoardForm } from "../components/BoardForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { EmptyContent } from "../components/EmptyContent";
+import { PageHeader } from "../components/PageHeader";
+import { displayName, FINAL_STATES, type CommandDetail } from "./machines/format";
+import { MachineRow } from "./machines/MachineRow";
+import { MachinesToolbar, type MachineFilter } from "./machines/MachinesToolbar";
 
-const fmt = (s: string | null) => (s ? new Date(s).toLocaleString("pt-BR") : "—");
+const HEAD = ["Máquina", "Tipo", "Loja", "Conexão", "Última vez visto", "Última liberação", ""];
 
-const STATE_LABEL: Record<string, string> = {
-  PENDING: "Enviando…",
-  SENT: "Enviado (aguardando confirmação)",
-  DONE: "Confirmado",
-  UNCONFIRMED: "Não confirmado",
-  FAILED: "Recusado pela placa",
-  EXPIRED: "Expirado",
-};
-const FINAL = ["DONE", "UNCONFIRMED", "FAILED", "EXPIRED"];
-
-interface Detail extends Command {
-  events: Array<{ type: string; detail: string | null; createdAt: string }>;
-}
-
-function displayName(b: Board) {
-  if (b.registered || b.name) return b.name ?? "—";
-  return "Nova placa";
+function matches(b: Board, filter: MachineFilter, search: string) {
+  if (filter === "online" && !b.online) return false;
+  if (filter === "offline" && b.online) return false;
+  const q = search.trim().toLowerCase();
+  if (!q) return true;
+  return [b.name, b.deviceId, b.storeName].some((v) => v?.toLowerCase().includes(q));
 }
 
 export function Machines() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState<string | null>(null);
-  const [active, setActive] = useState<Record<string, Detail>>({});
+  const [editing, setEditing] = useState<Board | null>(null);
+  const [active, setActive] = useState<Record<string, CommandDetail>>({});
   const [logOf, setLogOf] = useState<string | null>(null);
   const [pending, setPending] = useState<Board | null>(null);
+  const [filter, setFilter] = useState<MachineFilter>("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const load = useCallback(() => {
     api<Board[]>("/boards")
@@ -49,9 +57,9 @@ export function Machines() {
   const track = useCallback(
     (deviceId: string, commandId: string) => {
       const poll = async () => {
-        const d = await api<Detail>(`/commands/${commandId}`);
+        const d = await api<CommandDetail>(`/commands/${commandId}`);
         setActive((a) => ({ ...a, [deviceId]: d }));
-        if (!FINAL.includes(d.status)) setTimeout(() => void poll().catch(() => undefined), 1000);
+        if (!FINAL_STATES.includes(d.status)) setTimeout(() => void poll().catch(() => undefined), 1000);
         else load();
       };
       void poll().catch((e) => setError(e.message));
@@ -69,105 +77,74 @@ export function Machines() {
     }
   };
 
+  const counts = useMemo(() => {
+    const online = boards.filter((b) => b.online).length;
+    return { all: boards.length, online, offline: boards.length - online };
+  }, [boards]);
+  const filtered = useMemo(() => boards.filter((b) => matches(b, filter, search)), [boards, filter, search]);
+  const visible = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   return (
-    <section className="page">
-      <header className="page-header">
-        <div>
-          <h1>Máquinas</h1>
-          <p className="muted">Lavadoras e secadoras detectadas. A lista atualiza a cada 3 segundos.</p>
-        </div>
-      </header>
-      {error && <p className="error">{error}</p>}
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Tipo</th>
-              <th>Loja</th>
-              <th>Status</th>
-              <th>Última vez visto</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {boards.map((b) => {
-              const cmd = active[b.deviceId];
-              const lastStatus = cmd?.status ?? b.lastCommand?.status;
-              return (
-                <tr key={b.deviceId}>
-                  <td>
-                    <div className="machine-name">
-                      <strong>{displayName(b)}</strong>
-                      <code>{b.deviceId}</code>
-                    </div>
-                  </td>
-                  <td>{b.kind ? kindLabel(b.kind) : "—"}</td>
-                  <td>{b.storeName ?? "—"}</td>
-                  <td>
-                    <span className={`badge ${b.online ? "DONE" : "FAILED"}`}>{b.online ? "Online" : "Offline"}</span>
-                    {b.info && (
-                      <div className="muted tiny">{b.info.rssi ?? "?"} dBm · {b.info.fw ?? "?"}</div>
-                    )}
-                  </td>
-                  <td>{fmt(b.lastSeenAt)}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        disabled={!b.online}
-                        title={b.online ? "" : "Placa offline"}
-                        onClick={() => setPending(b)}
-                      >
-                        Liberar
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => setEditing(editing === b.deviceId ? null : b.deviceId)}
-                      >
-                        {b.registered ? "Editar" : "Cadastrar"}
-                      </button>
-                    </div>
-                    {lastStatus && (
-                      <div className="release-status">
-                        <span className={`badge ${lastStatus}`}>{STATE_LABEL[lastStatus] ?? lastStatus}</span>
-                        {cmd && (
-                          <button type="button" className="linkish" onClick={() => setLogOf(logOf === b.deviceId ? null : b.deviceId)}>
-                            {logOf === b.deviceId ? "Ocultar log" : "Log"}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {editing === b.deviceId && (
-                      <BoardForm
-                        board={b}
-                        onSaved={() => {
-                          setEditing(null);
-                          load();
-                        }}
-                        onCancel={() => setEditing(null)}
-                      />
-                    )}
-                    {logOf === b.deviceId && cmd && (
-                      <ul className="event-log">
-                        {cmd.events.map((e, i) => (
-                          <li key={i}>{fmt(e.createdAt)} — <strong>{e.type}</strong> {e.detail}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {!boards.length && (
-              <tr>
-                <td colSpan={6}>Nenhuma placa detectada ainda. Ligue a ESP32 com o firmware gravado.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+    <>
+      <PageHeader title="Máquinas" description="Lavadoras e secadoras detectadas. A lista atualiza a cada 3 segundos." />
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      <Card>
+        <MachinesToolbar
+          filter={filter}
+          counts={counts}
+          search={search}
+          onFilter={(f) => { setFilter(f); setPage(0); }}
+          onSearch={(s) => { setSearch(s); setPage(0); }}
+        />
+        <TableContainer>
+          <Table sx={{ minWidth: 960 }}>
+            <TableHead>
+              <TableRow>
+                {HEAD.map((h, i) => <TableCell key={i}>{h}</TableCell>)}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {visible.map((b) => (
+                <MachineRow
+                  key={b.deviceId}
+                  board={b}
+                  command={active[b.deviceId]}
+                  showLog={logOf === b.deviceId}
+                  onRelease={() => setPending(b)}
+                  onEdit={() => setEditing(b)}
+                  onToggleLog={() => setLogOf(logOf === b.deviceId ? null : b.deviceId)}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {!filtered.length && (
+          <Box sx={{ p: 2.5 }}>
+            <EmptyContent
+              title={boards.length ? "Nenhuma máquina encontrada" : "Nenhuma placa detectada ainda"}
+              description={boards.length ? "Ajuste a busca ou o filtro." : "Ligue a ESP32 com o firmware gravado."}
+            />
+          </Box>
+        )}
+        <TablePagination
+          component="div"
+          count={filtered.length}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[5, 10, 25]}
+          onPageChange={(_, p) => setPage(p)}
+          onRowsPerPageChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
+          labelRowsPerPage="Linhas por página:"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+        />
+      </Card>
+      {editing && (
+        <BoardForm
+          board={editing}
+          onSaved={() => { setEditing(null); load(); }}
+          onCancel={() => setEditing(null)}
+        />
+      )}
       {pending && (
         <ConfirmDialog
           title="Liberar máquina"
@@ -181,6 +158,6 @@ export function Machines() {
           }}
         />
       )}
-    </section>
+    </>
   );
 }

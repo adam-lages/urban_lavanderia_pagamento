@@ -1,3 +1,10 @@
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+
 interface Props {
   title: string;
   message: string;
@@ -16,21 +23,19 @@ export function ConfirmDialog({
   onCancel,
 }: Props) {
   return (
-    <div className="dialog-backdrop" role="presentation" onClick={onCancel}>
-      <div
-        className="dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 id="confirm-title">{title}</h3>
-        <p>{message}</p>
-        <div className="dialog-actions">
-          <button type="button" className="ghost" onClick={onCancel}>{cancelLabel}</button>
-          <button type="button" onClick={onConfirm}>{confirmLabel}</button>
-        </div>
-      </div>
-    </div>
+    <Dialog open onClose={onCancel} aria-labelledby="confirm-title" fullWidth maxWidth="xs">
+      <DialogTitle id="confirm-title">{title}</DialogTitle>
+      <DialogContent>
+        <DialogContentText>{message}</DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button variant="outlined" color="inherit" onClick={onCancel}>
+          {cancelLabel}
+        </Button>
+        <Button variant="contained" onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
