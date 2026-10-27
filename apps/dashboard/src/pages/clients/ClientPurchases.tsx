@@ -11,6 +11,7 @@ import TableRow from "@mui/material/TableRow";
 import { useCallback, useEffect, useState } from "react";
 import { api, type Sale, type SalePage } from "../../api";
 import { EmptyContent } from "../../components/EmptyContent";
+import { TableLoading } from "../../components/TableLoading";
 import { SaleDetails } from "../sales/SaleDetails";
 import { PurchaseRow } from "./PurchaseRow";
 
@@ -19,7 +20,7 @@ export function ClientPurchases({ customerId }: { customerId: string }) {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [items, setItems] = useState<Sale[]>([]);
   const [total, setTotal] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Sale | null>(null);
 
@@ -29,14 +30,15 @@ export function ClientPurchases({ customerId }: { customerId: string }) {
       page: String(page),
       limit: String(rowsPerPage),
     });
+    setLoading(true);
     api<SalePage>(`/sales?${params}`)
       .then((data) => {
         setItems(data.items ?? []);
         setTotal(data.total ?? 0);
-        setLoaded(true);
         setError("");
       })
-      .catch((e) => { setError(e.message); setLoaded(true); });
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [customerId, page, rowsPerPage]);
 
   useEffect(() => { load(); }, [load]);
@@ -44,6 +46,7 @@ export function ClientPurchases({ customerId }: { customerId: string }) {
   return (
     <Card>
       {error && <Alert severity="error" sx={{ m: 2.5, mb: 0 }}>{error}</Alert>}
+      <TableLoading loading={loading}>
       <TableContainer>
         <Table sx={{ minWidth: 800 }}>
           <TableHead>
@@ -63,7 +66,8 @@ export function ClientPurchases({ customerId }: { customerId: string }) {
           </TableBody>
         </Table>
       </TableContainer>
-      {loaded && !items.length && (
+      </TableLoading>
+      {!loading && !items.length && (
         <Box sx={{ p: 2.5 }}>
           <EmptyContent
             title="Nenhuma compra encontrada"

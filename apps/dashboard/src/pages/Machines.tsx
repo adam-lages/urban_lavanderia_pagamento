@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { api, type Machine } from "../api";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
+import { TableLoading } from "../components/TableLoading";
 import { useStores } from "../hooks";
 import { MachineRow } from "./machines/MachineRow";
 import { MachinesToolbar, type MachineFilter } from "./machines/MachinesToolbar";
@@ -31,28 +32,32 @@ export function Machines() {
   const { stores } = useStores();
   const [storeId, setStoreId] = useState("");
   const [items, setItems] = useState<Machine[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<MachineFilter>("all");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const load = useCallback(() => {
+  const load = useCallback((showSpinner = false) => {
     if (!storeId) {
       setItems([]);
+      setLoading(false);
       return;
     }
+    if (showSpinner) setLoading(true);
     api<Machine[]>(`/machines?storeId=${encodeURIComponent(storeId)}`)
       .then((rows) => {
         setItems(rows);
         setError("");
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [storeId]);
 
   useEffect(() => {
-    load();
+    load(true);
     if (!storeId) return;
-    const t = setInterval(load, 3000);
+    const t = setInterval(() => load(false), 3000);
     return () => clearInterval(t);
   }, [load, storeId]);
 
@@ -90,6 +95,7 @@ export function Machines() {
           onStore={(id) => { setStoreId(id); setFilter("all"); setPage(0); }}
           onFilter={(f) => { setFilter(f); setPage(0); }}
         />
+        <TableLoading loading={loading}>
         <TableContainer>
           <Table sx={{ minWidth: 720 }}>
             <TableHead>
@@ -108,7 +114,8 @@ export function Machines() {
             </TableBody>
           </Table>
         </TableContainer>
-        {!filtered.length && (
+        </TableLoading>
+        {!loading && !filtered.length && (
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
               title={!storeId ? "Selecione uma lavanderia" : "Nenhuma máquina encontrada"}

@@ -28,6 +28,19 @@ describe("dados de demonstração", () => {
     });
     const unique = await rows("SELECT COUNT(DISTINCT code) AS c, COUNT(DISTINCT device_id) AS d, COUNT(*) AS n FROM machines");
     expect(unique[0]).toMatchObject({ c: 14, d: 14, n: 14 });
+    const blocked = await rows("SELECT active FROM machines WHERE id = 'm-alg-4'");
+    expect(blocked[0].active).toBe(false);
+  });
+
+  it("cadastra as placas das máquinas e uma placa ainda sem cadastro", async () => {
+    const devices = await rows("SELECT device_id, name, store_id, kind FROM devices ORDER BY device_id");
+    expect(devices).toHaveLength(15);
+    expect(devices.filter((d) => d.store_id && d.name && d.kind)).toHaveLength(14);
+    expect(devices.find((d) => d.device_id === "esp-nova-sem-cadastro")).toMatchObject({
+      name: null,
+      store_id: null,
+      kind: null,
+    });
   });
 
   it("cria 50 clientes aleatórios por lavanderia com CPF único", async () => {

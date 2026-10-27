@@ -44,9 +44,9 @@ describe("navegação do dashboard", () => {
     const user = userEvent.setup();
     renderApp("/", { token: "dev-admin-token" });
     await user.click(screen.getByRole("link", { name: "Clientes" }));
-    expect(screen.getByRole("heading", { name: "Listagem de clientes" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Clientes" })).toBeTruthy();
     await user.click(screen.getByRole("link", { name: "Vendas" }));
-    expect(screen.getByRole("heading", { name: "Listagem de vendas" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Vendas" })).toBeTruthy();
     await user.click(screen.getByRole("link", { name: "Lavanderias" }));
     expect(screen.getByRole("heading", { name: "Lavanderias" })).toBeTruthy();
     await user.click(screen.getByRole("link", { name: "Cupons" }));

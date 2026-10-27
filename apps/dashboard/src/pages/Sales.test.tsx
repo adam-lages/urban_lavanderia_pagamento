@@ -83,10 +83,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("página Listagem de vendas", () => {
+describe("página Vendas", () => {
   it("mostra cliente, máquina, valor e método", async () => {
     renderApp("/vendas", { token: "dev-admin-token" });
-    expect(await screen.findByRole("heading", { name: "Listagem de vendas" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Vendas" })).toBeTruthy();
     expect(await screen.findByText("Ana Souza")).toBeTruthy();
     expect(screen.getByText("529.982.247-25")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Unidade" })).toBeTruthy();

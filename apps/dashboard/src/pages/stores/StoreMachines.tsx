@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type Command, type Machine } from "../../api";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { EmptyContent } from "../../components/EmptyContent";
+import { LoadingCenter } from "../../components/TableLoading";
 import { canRelease, MachineCard, releaseHint } from "./MachineCard";
 
 function MachineGroup({ title, items, onRelease, onToggleBlock }: {
@@ -34,23 +35,24 @@ function MachineGroup({ title, items, onRelease, onToggleBlock }: {
 
 export function StoreMachines({ storeId }: { storeId: string }) {
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [pending, setPending] = useState<Machine | null>(null);
 
-  const load = useCallback(() => {
+  const load = useCallback((showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     api<Machine[]>(`/machines?storeId=${encodeURIComponent(storeId)}`)
       .then((rows) => {
         setMachines(rows);
         setError("");
       })
       .catch((e) => setError(e.message))
-      .finally(() => setLoaded(true));
+      .finally(() => setLoading(false));
   }, [storeId]);
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 3000);
+    load(true);
+    const t = setInterval(() => load(false), 3000);
     return () => clearInterval(t);
   }, [load]);
 
@@ -83,7 +85,8 @@ export function StoreMachines({ storeId }: { storeId: string }) {
   return (
     <Stack spacing={4}>
       {error && <Alert severity="error">{error}</Alert>}
-      {loaded && !machines.length && (
+      {loading && <LoadingCenter />}
+      {!loading && !machines.length && (
         <EmptyContent title="Nenhuma máquina nesta lavanderia" description="Cadastre a placa na tela Máquinas e vincule a esta loja." />
       )}
       <MachineGroup title="Lavadoras" items={washers} onRelease={setPending} onToggleBlock={(m) => void toggleBlock(m)} />

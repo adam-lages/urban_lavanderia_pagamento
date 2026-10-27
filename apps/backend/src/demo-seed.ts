@@ -9,6 +9,8 @@ const STORES: Array<{ id: string; name: string; code: string; address: string; p
 ];
 
 const RANDOM_CUSTOMERS_PER_STORE = 50;
+const BLOCKED_MACHINE_ID = "m-alg-4";
+const UNREGISTERED_DEVICE = "esp-nova-sem-cadastro";
 
 const CUSTOMERS: Array<{
   id: string; name: string; birthDate: string; cpf: string; email: string; phone: string; blocked?: boolean; createdAt: string;
@@ -38,7 +40,20 @@ async function storeIds(db: Queryable) {
   return (await db.query("SELECT id FROM stores ORDER BY name")).rows.map((r) => r.id as string);
 }
 
-async function insertMachines(db: Queryable) {
+async function seedStoresIfEmpty(db: Queryable): Promise<boolean> {
+  if ((await db.query("SELECT 1 FROM stores LIMIT 1")).rows.length) return false;
+  for (const s of STORES) {
+    await db.query("INSERT INTO stores (id, name, code, address, created_at) VALUES ($1,$2,$3,$4,now())", [s.id, s.name, s.code, s.address]);
+    await db.query(
+      "INSERT INTO prices (id, store_id, kind, amount_cents, updated_at) VALUES ($1,$2,'WASHER',$4,now()),($3,$2,'DRYER',$4,now())",
+      [`p-w-${s.id}`, s.id, `p-d-${s.id}`, BASE_PRICE_CENTS],
+    );
+  }
+  return true;
+}
+
+async function seedMachinesIfEmpty(db: Queryable) {
+  if ((await db.query("SELECT 1 FROM machines LIMIT 1")).rows.length) return;
   for (const s of STORES) {
     const layout = [
       ...Array.from({ length: s.washers }, (_, i) => ({ kind: "WASHER" as const, label: `Lavadora ${i + 1}` })),
@@ -51,6 +66,29 @@ async function insertMachines(db: Queryable) {
       );
     }
   }
+  await db.query("UPDATE machines SET active = false, blocked_at = now() WHERE id = $1", [BLOCKED_MACHINE_ID]);
+}
+
+async function seedDevicesIfEmpty(db: Queryable, boardId: string | undefined, now: Date) {
+  if (boardId) {
+    await db.query("UPDATE machines SET device_id = $1 WHERE id = 'm-mar-1'", [boardId]);
+  }
+  if ((await db.query("SELECT 1 FROM devices LIMIT 1")).rows.length) return;
+  const machines = (await db.query(
+    "SELECT device_id, store_id, kind, label FROM machines WHERE device_id IS NOT NULL ORDER BY code",
+  )).rows as Array<{ device_id: string; store_id: string; kind: string; label: string }>;
+  for (const [i, m] of machines.entries()) {
+    const seen = new Date(now.getTime() - i * 90_000);
+    const info = JSON.stringify({ fw: "0.1.0", ip: `10.1.2.${10 + i}`, rssi: -55 - i, driver: "gpio" });
+    await db.query(
+      "INSERT INTO devices (device_id, name, store_id, kind, first_seen_at, last_seen_at, info) VALUES ($1,$2,$3,$4,$5,$5,$6) ON CONFLICT (device_id) DO NOTHING",
+      [m.device_id, m.label, m.store_id, m.kind, seen, info],
+    );
+  }
+  await db.query(
+    "INSERT INTO devices (device_id, first_seen_at, last_seen_at) VALUES ($1,$2,$2) ON CONFLICT (device_id) DO NOTHING",
+    [UNREGISTERED_DEVICE, now],
+  );
 }
 
 export async function seedIfEmpty(
@@ -58,33 +96,18 @@ export async function seedIfEmpty(
   boardId: string | undefined = process.env.DEMO_BOARD_ID?.trim(),
   now: Date = new Date(),
 ): Promise<boolean> {
-  const existing = await db.query("SELECT 1 FROM stores LIMIT 1");
-  if (existing.rows.length) {
-    await seedCustomersIfEmpty(db);
-    await seedSalesIfEmpty(db, now);
-    console.log("Banco já possui lojas; seed de lojas ignorado.");
-    return false;
-  }
-  for (const s of STORES) {
-    await db.query("INSERT INTO stores (id, name, code, address, created_at) VALUES ($1,$2,$3,$4,now())", [s.id, s.name, s.code, s.address]);
-    await db.query(
-      "INSERT INTO prices (id, store_id, kind, amount_cents, updated_at) VALUES ($1,$2,'WASHER',$4,now()),($3,$2,'DRYER',$4,now())",
-      [`p-w-${s.id}`, s.id, `p-d-${s.id}`, BASE_PRICE_CENTS],
-    );
-  }
-  await insertMachines(db);
-  if (boardId) {
-    await db.query(
-      "INSERT INTO devices (device_id, name, store_id, kind, first_seen_at) VALUES ($1,'Lavadora 1',$2,'WASHER',now()) ON CONFLICT (device_id) DO NOTHING",
-      [boardId, "loja-maranguape-1"],
-    );
-    console.log(`Placa ${boardId} cadastrada como "Lavadora 1" (Maranguape 1).`);
-  }
+  const createdStores = await seedStoresIfEmpty(db);
+  await seedMachinesIfEmpty(db);
+  await seedDevicesIfEmpty(db, boardId, now);
   await seedCustomersIfEmpty(db);
-  await seedRandomCustomers(db, now);
+  await seedRandomCustomersIfEmpty(db, now);
   await seedSalesIfEmpty(db, now);
-  console.log("Seed criado: Maranguape 1, Parque Recife e Algarve, com clientes e vendas de demonstração.");
-  return true;
+  if (createdStores) {
+    console.log("Seed criado: 3 lavanderias, máquinas, placas, clientes e vendas de demonstração.");
+  } else {
+    console.log("Banco já possui lojas; seed preencheu só o que ainda estava vazio.");
+  }
+  return createdStores;
 }
 
 export async function seedCustomersIfEmpty(db: Queryable): Promise<void> {
@@ -95,10 +118,12 @@ export async function seedCustomersIfEmpty(db: Queryable): Promise<void> {
   for (const [i, c] of CUSTOMERS.entries()) await insertCustomer(db, c, stores[i % stores.length]!);
 }
 
-async function seedRandomCustomers(db: Queryable, now: Date) {
+async function seedRandomCustomersIfEmpty(db: Queryable, now: Date) {
+  if ((await db.query("SELECT 1 FROM customers WHERE id LIKE 'cli-demo-%' LIMIT 1")).rows.length) return;
+  const stores = await storeIds(db);
+  if (!stores.length) return;
   const used = new Set((await db.query("SELECT cpf FROM customers")).rows.map((r) => r.cpf as string));
   const from = new Date(Date.UTC(now.getUTCFullYear(), 4, 1, 12));
   const list = randomCustomers(mulberry32(20260502), RANDOM_CUSTOMERS_PER_STORE * STORES.length, used, from, now);
-  const stores = await storeIds(db);
   for (const [i, c] of list.entries()) await insertCustomer(db, c, stores[i % stores.length]!);
 }

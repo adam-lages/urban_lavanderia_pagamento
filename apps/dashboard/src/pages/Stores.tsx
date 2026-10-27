@@ -20,6 +20,7 @@ import type { Store } from "../api";
 import { DetailsButton } from "../components/DetailsButton";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
+import { TableLoading } from "../components/TableLoading";
 import { useStores } from "../hooks";
 
 function matches(store: Store, search: string) {
@@ -29,7 +30,7 @@ function matches(store: Store, search: string) {
 }
 
 export function Stores() {
-  const { stores, error } = useStores();
+  const { stores, error, loading } = useStores();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -67,6 +68,7 @@ export function Stores() {
             }}
           />
         </Box>
+        <TableLoading loading={loading}>
         <TableContainer>
           <Table sx={{ minWidth: 720 }}>
             <TableHead>
@@ -94,7 +96,8 @@ export function Stores() {
             </TableBody>
           </Table>
         </TableContainer>
-        {!filtered.length && (
+        </TableLoading>
+        {!loading && !filtered.length && (
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
               title={stores.length ? "Nenhuma lavanderia encontrada" : "Nenhuma lavanderia cadastrada"}

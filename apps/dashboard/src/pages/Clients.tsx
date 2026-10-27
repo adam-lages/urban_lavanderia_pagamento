@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { api, type Customer, type CustomerPage } from "../api";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
+import { TableLoading } from "../components/TableLoading";
 import { useStores } from "../hooks";
 import { ClientRow } from "./clients/ClientRow";
 import { ClientsToolbar } from "./clients/ClientsToolbar";
@@ -31,6 +32,7 @@ export function Clients() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const filtered = Boolean(query.storeId || query.name || query.cpf);
@@ -54,13 +56,15 @@ export function Clients() {
       page: String(page),
       limit: String(rowsPerPage),
     });
+    setLoading(true);
     api<CustomerPage>(`/customers?${params}`)
       .then((data) => {
         setItems(data.items ?? []);
         setTotal(data.total ?? 0);
         setError("");
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [query, page, rowsPerPage]);
 
   useEffect(() => { load(); }, [load]);
@@ -77,7 +81,7 @@ export function Clients() {
 
   return (
     <>
-      <PageHeader title="Listagem de clientes" />
+      <PageHeader title="Clientes" />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Card>
         <ClientsToolbar
@@ -92,6 +96,7 @@ export function Clients() {
           onClear={clearFilters}
           onExport={() => void exportSheet()}
         />
+        <TableLoading loading={loading}>
         <TableContainer>
           <Table sx={{ minWidth: 880 }}>
             <TableHead>
@@ -112,7 +117,8 @@ export function Clients() {
             </TableBody>
           </Table>
         </TableContainer>
-        {!items.length && (
+        </TableLoading>
+        {!loading && !items.length && (
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
               title={filtered ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}

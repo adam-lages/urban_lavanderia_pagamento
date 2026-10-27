@@ -99,6 +99,26 @@ beforeEach(() => {
 });
 
 describe("página Lavanderias", () => {
+  it("mostra loading no centro da tabela enquanto busca", async () => {
+    let send!: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      send = resolve;
+    });
+    const prev = fetch as unknown as (input: RequestInfo | URL, init?: RequestInit) => Promise<unknown>;
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/api/stores") && (init?.method ?? "GET") === "GET") {
+        return pending.then(() => json(stores));
+      }
+      return prev(input, init);
+    });
+    renderApp("/lavanderias", { token: "dev-admin-token" });
+    expect(await screen.findByRole("progressbar", { name: "Carregando" })).toBeTruthy();
+    expect(screen.queryByText("Centro")).toBeNull();
+    send(undefined);
+    expect(await screen.findByText("Centro")).toBeTruthy();
+    expect(screen.queryByRole("progressbar", { name: "Carregando" })).toBeNull();
+  });
+
   it("lista nome, endereço e abre os detalhes", async () => {
     const user = userEvent.setup();
     renderApp("/lavanderias", { token: "dev-admin-token" });

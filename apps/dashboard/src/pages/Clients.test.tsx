@@ -118,11 +118,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("página Listagem de clientes", () => {
+describe("página Clientes", () => {
   it("mostra colunas, status e abre os detalhes", async () => {
     const user = userEvent.setup();
     renderApp("/clientes", { token: "dev-admin-token" });
-    expect(await screen.findByRole("heading", { name: "Listagem de clientes" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Clientes" })).toBeTruthy();
     expect(await screen.findByText("Ana Souza")).toBeTruthy();
     expect(screen.getByText("529.982.247-25")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Unidade" })).toBeTruthy();

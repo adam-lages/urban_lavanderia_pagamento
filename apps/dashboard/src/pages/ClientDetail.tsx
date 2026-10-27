@@ -41,7 +41,7 @@ export function ClientDetail() {
     <>
       <PageHeader
         title={customer?.name ?? "Cliente"}
-        crumbs={[{ label: "Listagem de clientes", to: "/clientes" }, { label: customer?.name ?? "Detalhes" }]}
+        crumbs={[{ label: "Clientes", to: "/clientes" }, { label: customer?.name ?? "Detalhes" }]}
       />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Tabs

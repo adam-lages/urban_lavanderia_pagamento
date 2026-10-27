@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type Sale, type SalePage } from "../api";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
+import { TableLoading } from "../components/TableLoading";
 import { useStores } from "../hooks";
 import { SaleDetails } from "./sales/SaleDetails";
 import { SaleRow } from "./sales/SaleRow";
@@ -26,6 +27,7 @@ export function Sales() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [items, setItems] = useState<Sale[]>([]);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Sale | null>(null);
 
@@ -48,20 +50,22 @@ export function Sales() {
       page: String(page),
       limit: String(rowsPerPage),
     });
+    setLoading(true);
     api<SalePage>(`/sales?${params}`)
       .then((data) => {
         setItems(data.items ?? []);
         setTotal(data.total ?? 0);
         setError("");
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [query, page, rowsPerPage]);
 
   useEffect(() => { load(); }, [load]);
 
   return (
     <>
-      <PageHeader title="Listagem de vendas" />
+      <PageHeader title="Vendas" />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Card>
         <SalesToolbar
@@ -73,6 +77,7 @@ export function Sales() {
           onSearch={search}
           onClear={clearFilters}
         />
+        <TableLoading loading={loading}>
         <TableContainer>
           <Table sx={{ minWidth: 960 }}>
             <TableHead>
@@ -94,7 +99,8 @@ export function Sales() {
             </TableBody>
           </Table>
         </TableContainer>
-        {!items.length && (
+        </TableLoading>
+        {!loading && !items.length && (
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
               title={query.storeId || query.customerName ? "Nenhuma venda encontrada" : "Nenhuma venda registrada"}
