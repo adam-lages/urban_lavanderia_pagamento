@@ -9,6 +9,7 @@ export function SaleRow({ sale: s }: { sale: Sale }) {
   const when = s.paidAt ? new Date(s.paidAt) : null;
   return (
     <TableRow hover>
+      <TableCell sx={{ whiteSpace: "nowrap" }}>{s.storeName}</TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>
         <Typography variant="subtitle2">{dash(s.customerName)}</Typography>
         <Typography variant="caption" color="text.disabled">

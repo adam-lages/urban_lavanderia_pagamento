@@ -42,7 +42,7 @@ export function Stores() {
   return (
     <>
       <PageHeader
-        title="Minhas Lavanderias"
+        title="Lavanderias"
         description="Cadastre e edite as lojas da operação."
         action={
           <Button variant="contained" color="inherit" startIcon={<AddRounded />} onClick={() => navigate("/lavanderias/nova")}>

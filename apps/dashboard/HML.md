@@ -28,7 +28,7 @@ Hoje o painel é um site React (biblioteca de telas) montado com Vite (ferrament
 | `/` | Início | só um aviso “Em breve.” |
 | `/clientes` | Listagem de clientes | **funciona** (lista, filtro por nome/CPF, exportar, detalhes) |
 | `/vendas` | Listagem de vendas | **funciona** (filtro por loja e cliente, paginação) |
-| `/lavanderias` | Minhas Lavanderias | **funciona** (lista, busca, cadastra, edita, exclui) |
+| `/lavanderias` | Lavanderias | **funciona** (lista, busca, cadastra, edita, exclui) |
 | `/cupons` | Cupons | ainda não existe (placeholder) |
 | `/maquinas` | Máquinas | **funciona** (filtro por lavanderia, status ESP32, cadastro e detalhes) |
 | `/login` | Entrar | pede o token de administrador |

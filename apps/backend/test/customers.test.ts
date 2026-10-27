@@ -5,6 +5,7 @@ import { seedCustomersIfEmpty } from "../src/demo-seed.js";
 let s: Stack;
 beforeEach(async () => {
   s = await startStack();
+  await s.db.query("INSERT INTO stores (id, name, code, created_at) VALUES ('st-a','A','10000001',now()), ('st-b','B','10000002',now())");
   await seedCustomersIfEmpty(s.db);
 });
 afterEach(async () => {
@@ -31,14 +32,12 @@ describe("clientes", () => {
     expect(byCpf.items[0].cpf).toBe("52998224725");
   });
 
-  it("filtra os clientes pela lavanderia onde compraram", async () => {
-    await s.db.query("INSERT INTO stores (id, name, code, created_at) VALUES ('st-a','A','10000001',now()), ('st-b','B','10000002',now())");
-    await s.db.query(
-      "INSERT INTO orders (id, store_id, status, total_cents, customer_id, created_at, paid_at) VALUES ('o-1','st-a','PAID',100,'cli-ana',now(),now()), ('o-2','st-b','PAID',100,'cli-bruno',now(),now())",
-    );
+  it("filtra os clientes pela unidade de cadastro e informa a unidade", async () => {
     const a = (await s.app.inject({ method: "GET", url: "/customers?storeId=st-a", headers: ADMIN })).json();
-    expect(a.total).toBe(1);
-    expect(a.items[0].id).toBe("cli-ana");
+    expect(a.total).toBe(4);
+    expect(a.items.map((c: { storeName: string }) => c.storeName)).toEqual(["A", "A", "A", "A"]);
+    expect(a.items.map((c: { id: string }) => c.id)).toContain("cli-ana");
+    expect(a.items.map((c: { id: string }) => c.id)).not.toContain("cli-bruno");
     const none = (await s.app.inject({ method: "GET", url: "/customers?storeId=st-x", headers: ADMIN })).json();
     expect(none.total).toBe(0);
   });
@@ -47,6 +46,7 @@ describe("clientes", () => {
     const one = await s.app.inject({ method: "GET", url: "/customers/cli-ana", headers: ADMIN });
     expect(one.statusCode).toBe(200);
     expect(one.json().email).toBe("ana.souza@email.com");
+    expect(one.json()).toMatchObject({ storeId: "st-a", storeName: "A" });
     expect((await s.app.inject({ method: "GET", url: "/customers", headers: POS })).statusCode).toBe(401);
     expect((await s.app.inject({ method: "GET", url: "/customers/nao-existe", headers: ADMIN })).statusCode).toBe(404);
   });

@@ -26,11 +26,16 @@ const CUSTOMERS: Array<{
 async function insertCustomer(
   db: Queryable,
   c: { id: string; name: string; birthDate: string; cpf: string; email: string; phone: string; blocked?: boolean; createdAt: string },
+  storeId: string,
 ) {
   await db.query(
-    "INSERT INTO customers (id, name, birth_date, cpf, email, phone, blocked, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
-    [c.id, c.name, c.birthDate, c.cpf, c.email, c.phone, Boolean(c.blocked), c.createdAt],
+    "INSERT INTO customers (id, name, birth_date, cpf, email, phone, blocked, created_at, store_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+    [c.id, c.name, c.birthDate, c.cpf, c.email, c.phone, Boolean(c.blocked), c.createdAt, storeId],
   );
+}
+
+async function storeIds(db: Queryable) {
+  return (await db.query("SELECT id FROM stores ORDER BY name")).rows.map((r) => r.id as string);
 }
 
 async function insertMachines(db: Queryable) {
@@ -85,12 +90,15 @@ export async function seedIfEmpty(
 export async function seedCustomersIfEmpty(db: Queryable): Promise<void> {
   const existing = await db.query("SELECT 1 FROM customers LIMIT 1");
   if (existing.rows.length) return;
-  for (const c of CUSTOMERS) await insertCustomer(db, c);
+  const stores = await storeIds(db);
+  if (!stores.length) return;
+  for (const [i, c] of CUSTOMERS.entries()) await insertCustomer(db, c, stores[i % stores.length]!);
 }
 
 async function seedRandomCustomers(db: Queryable, now: Date) {
   const used = new Set((await db.query("SELECT cpf FROM customers")).rows.map((r) => r.cpf as string));
   const from = new Date(Date.UTC(now.getUTCFullYear(), 4, 1, 12));
   const list = randomCustomers(mulberry32(20260502), RANDOM_CUSTOMERS_PER_STORE * STORES.length, used, from, now);
-  for (const c of list) await insertCustomer(db, c);
+  const stores = await storeIds(db);
+  for (const [i, c] of list.entries()) await insertCustomer(db, c, stores[i % stores.length]!);
 }

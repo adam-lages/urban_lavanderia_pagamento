@@ -56,10 +56,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+async function searchAlgarve(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByLabelText("Unidade"));
+  await user.click(await screen.findByRole("option", { name: "Algarve" }));
+  await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+}
+
 describe("página inicial", () => {
-  it("abre em Hoje, com as datas preenchidas e travadas", async () => {
+  it("abre em Hoje, com as datas travadas e sem gráficos até escolher a unidade", async () => {
     renderApp("/", { token: "dev-admin-token" });
-    expect(await screen.findByText("Quantidade de ciclos")).toBeTruthy();
+    expect(await screen.findByText(/Escolha a unidade e o período/)).toBeTruthy();
+    expect(screen.queryByText("Quantidade de ciclos")).toBeNull();
     const today = rangeFor("today");
     const from = screen.getByLabelText("Data inicial") as HTMLInputElement;
     const to = screen.getByLabelText("Data final") as HTMLInputElement;
@@ -67,12 +74,15 @@ describe("página inicial", () => {
     expect(to.value).toBe(today.to);
     expect(from.disabled).toBe(true);
     expect(to.disabled).toBe(true);
-    expect(overviewCalls()[0]).toContain(`from=${today.from}&to=${today.to}`);
+    expect(overviewCalls()).toHaveLength(0);
   });
 
-  it("mostra os indicadores e os gráficos pedidos", async () => {
+  it("mostra os indicadores e os gráficos pedidos da unidade escolhida", async () => {
+    const user = userEvent.setup();
     renderApp("/", { token: "dev-admin-token" });
+    await searchAlgarve(user);
     expect(await screen.findByText("R$ 60,00")).toBeTruthy();
+    expect(overviewCalls()[0]).toContain("storeId=loja-algarve");
     expect(screen.getByText("R$ 15,00")).toBeTruthy();
     for (const title of [
       "Quantidade de ciclos",
@@ -89,8 +99,8 @@ describe("página inicial", () => {
     ]) {
       expect(screen.getByRole("heading", { name: title })).toBeTruthy();
     }
-    expect(screen.getByText("Lavadora 1 · Algarve")).toBeTruthy();
-    expect(screen.getByText("Secadora 1 · Algarve")).toBeTruthy();
+    expect(screen.getByText("Lavadora 1")).toBeTruthy();
+    expect(screen.getByText("Secadora 1")).toBeTruthy();
     expect(screen.getByText(/2 clientes no período, 1 recorrentes \(50%\)/)).toBeTruthy();
     expect(screen.getByText(/1 compras sem cliente identificado/)).toBeTruthy();
   });
@@ -98,14 +108,14 @@ describe("página inicial", () => {
   it("preenche as datas ao trocar o período e só libera em Customizado", async () => {
     const user = userEvent.setup();
     renderApp("/", { token: "dev-admin-token" });
-    await screen.findByText("Quantidade de ciclos");
+    await screen.findByText(/Escolha a unidade/);
     await user.click(screen.getByLabelText("Período"));
     await user.click(await screen.findByRole("option", { name: "Últimos 7 dias" }));
     const week = rangeFor("last7");
     expect((screen.getByLabelText("Data inicial") as HTMLInputElement).value).toBe(week.from);
     expect((screen.getByLabelText("Data final") as HTMLInputElement).value).toBe(week.to);
     expect((screen.getByLabelText("Data inicial") as HTMLInputElement).disabled).toBe(true);
-    expect(overviewCalls()).toHaveLength(1);
+    expect(overviewCalls()).toHaveLength(0);
 
     await user.click(screen.getByLabelText("Período"));
     await user.click(await screen.findByRole("option", { name: "Customizado" }));
@@ -116,7 +126,7 @@ describe("página inicial", () => {
   it("pesquisa com unidade e intervalo customizado e limpa o filtro", async () => {
     const user = userEvent.setup();
     renderApp("/", { token: "dev-admin-token" });
-    await screen.findByText("Quantidade de ciclos");
+    await screen.findByText(/Escolha a unidade/);
     await user.click(screen.getByLabelText("Unidade"));
     await user.click(await screen.findByRole("option", { name: "Algarve" }));
     await user.click(screen.getByLabelText("Período"));
@@ -124,23 +134,37 @@ describe("página inicial", () => {
     fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-10-01" } });
     fireEvent.change(screen.getByLabelText("Data final"), { target: { value: "2026-10-15" } });
     await user.click(screen.getByRole("button", { name: "Pesquisar" }));
-    await waitFor(() => expect(overviewCalls()).toHaveLength(2));
-    expect(overviewCalls()[1]).toContain("from=2026-10-01");
-    expect(overviewCalls()[1]).toContain("to=2026-10-15");
-    expect(overviewCalls()[1]).toContain("storeId=loja-algarve");
+    await waitFor(() => expect(overviewCalls()).toHaveLength(1));
+    expect(overviewCalls()[0]).toContain("from=2026-10-01");
+    expect(overviewCalls()[0]).toContain("to=2026-10-15");
+    expect(overviewCalls()[0]).toContain("storeId=loja-algarve");
 
     await user.click(screen.getByRole("button", { name: "Limpar" }));
-    await waitFor(() => expect(overviewCalls()).toHaveLength(3));
+    expect(await screen.findByText(/Escolha a unidade/)).toBeTruthy();
+    expect(screen.queryByText("Quantidade de ciclos")).toBeNull();
+    expect(overviewCalls()).toHaveLength(1);
     const today = rangeFor("today");
-    expect(overviewCalls()[2]).toContain(`from=${today.from}`);
-    expect(overviewCalls()[2]).not.toContain("storeId");
+    expect((screen.getByLabelText("Data inicial") as HTMLInputElement).value).toBe(today.from);
     expect((screen.getByLabelText("Data inicial") as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it("só habilita Pesquisar depois de escolher a unidade", async () => {
+    const user = userEvent.setup();
+    renderApp("/", { token: "dev-admin-token" });
+    await screen.findByText(/Escolha a unidade/);
+    const button = screen.getByRole("button", { name: "Pesquisar" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    await user.click(screen.getByLabelText("Unidade"));
+    await user.click(await screen.findByRole("option", { name: "Algarve" }));
+    expect(button.disabled).toBe(false);
   });
 
   it("bloqueia a pesquisa quando o intervalo é inválido", async () => {
     const user = userEvent.setup();
     renderApp("/", { token: "dev-admin-token" });
-    await screen.findByText("Quantidade de ciclos");
+    await screen.findByText(/Escolha a unidade/);
+    await user.click(screen.getByLabelText("Unidade"));
+    await user.click(await screen.findByRole("option", { name: "Algarve" }));
     await user.click(screen.getByLabelText("Período"));
     await user.click(await screen.findByRole("option", { name: "Customizado" }));
     fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-10-20" } });

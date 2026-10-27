@@ -31,8 +31,8 @@ beforeEach(async () => {
   dryerId = dryer.id;
   for (const id of ["c1", "c2"]) {
     await s.db.query(
-      "INSERT INTO customers (id, name, birth_date, cpf, email, phone, created_at) VALUES ($1,$1,'1990-01-01',$2,'a@a.com','1',now())",
-      [id, id === "c1" ? "11111111111" : "22222222222"],
+      "INSERT INTO customers (id, name, birth_date, cpf, email, phone, created_at, store_id) VALUES ($1,$1,'1990-01-01',$2,'a@a.com','1',now(),$3)",
+      [id, id === "c1" ? "11111111111" : "22222222222", storeId],
     );
   }
   await paidOrder("o1", "c1", "2026-10-05T13:00:00.000Z", [[washerId, "WASHER", 1800]]);

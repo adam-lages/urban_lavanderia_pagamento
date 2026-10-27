@@ -35,6 +35,9 @@ describe("dados de demonstração", () => {
     expect(total).toBe(8 + 150);
     expect(Number((await rows("SELECT COUNT(DISTINCT cpf) AS n FROM customers"))[0].n)).toBe(total);
     expect(Number((await rows("SELECT COUNT(*) AS n FROM customers WHERE id LIKE 'cli-demo-%'"))[0].n)).toBe(150);
+    const perStore = await rows("SELECT store_id, COUNT(*) AS n FROM customers WHERE id LIKE 'cli-demo-%' GROUP BY store_id");
+    expect(perStore.map((r) => Number(r.n))).toEqual([50, 50, 50]);
+
   });
 
   it("gera vendas de 1º de maio até agora, com cupom e preço base de R$ 16,90", async () => {

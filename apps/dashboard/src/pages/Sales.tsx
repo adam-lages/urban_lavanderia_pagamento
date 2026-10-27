@@ -75,6 +75,7 @@ export function Sales() {
           <Table sx={{ minWidth: 1280 }}>
             <TableHead>
               <TableRow>
+                <TableCell>Unidade</TableCell>
                 <TableCell>Cliente</TableCell>
                 <TableCell>Máquina</TableCell>
                 <TableCell>Data da compra</TableCell>

@@ -9,10 +9,9 @@ interface Props {
   title: string;
   color: "secondary" | "warning";
   machines: Overview["machines"];
-  showStore: boolean;
 }
 
-export function MachineRevenueCard({ title, color, machines, showStore }: Props) {
+export function MachineRevenueCard({ title, color, machines }: Props) {
   const max = Math.max(1, ...machines.map((m) => m.revenueCents));
   const total = machines.reduce((s, m) => s + m.revenueCents, 0);
   return (
@@ -24,7 +23,7 @@ export function MachineRevenueCard({ title, color, machines, showStore }: Props)
         {machines.map((m) => (
           <Box key={m.machineId}>
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-              <Typography variant="subtitle2">{showStore ? `${m.label} · ${m.storeName}` : m.label}</Typography>
+              <Typography variant="subtitle2">{m.label}</Typography>
               <Typography variant="body2">
                 {brl(m.revenueCents)}{" "}
                 <Typography component="span" variant="caption" color="text.secondary">

@@ -9,6 +9,8 @@ export interface Customer {
   email: string;
   phone: string;
   blocked: boolean;
+  storeId: string;
+  storeName: string;
   createdAt: string;
 }
 export interface CustomerPage { items: Customer[]; total: number }

@@ -181,7 +181,7 @@ export class OverviewService {
     let store = "";
     if (storeId) {
       params.push(storeId);
-      store = ` AND id IN (SELECT customer_id FROM orders WHERE store_id = $2 AND customer_id IS NOT NULL)`;
+      store = " AND store_id = $2";
     }
     const { rows } = await this.db.query(`SELECT created_at FROM customers WHERE created_at >= $1${store}`, params);
     const perDay = new Map<string, number>();

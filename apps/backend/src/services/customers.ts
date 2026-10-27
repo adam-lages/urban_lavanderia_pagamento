@@ -10,6 +10,8 @@ export interface Customer {
   email: string;
   phone: string;
   blocked: boolean;
+  storeId: string;
+  storeName: string;
   createdAt: string;
 }
 
@@ -49,9 +51,13 @@ export function mapCustomer(r: any, now = new Date()): Customer {
     email: r.email,
     phone: r.phone,
     blocked: Boolean(r.blocked),
+    storeId: r.store_id ?? "",
+    storeName: r.store_name ?? "",
     createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
   };
 }
+
+const SELECT = "SELECT c.*, s.name AS store_name FROM customers c LEFT JOIN stores s ON s.id = c.store_id";
 
 export class CustomerService {
   constructor(private db: Db, private now: () => Date = () => new Date()) {}
@@ -66,21 +72,21 @@ export class CustomerService {
     const params: unknown[] = [];
     if (name) {
       params.push(`%${name}%`);
-      where.push(`name ILIKE $${params.length}`);
+      where.push(`c.name ILIKE $${params.length}`);
     }
     if (cpf) {
       params.push(`%${cpf}%`);
-      where.push(`cpf LIKE $${params.length}`);
+      where.push(`c.cpf LIKE $${params.length}`);
     }
     if (storeId) {
       params.push(storeId);
-      where.push(`id IN (SELECT customer_id FROM orders WHERE store_id = $${params.length} AND customer_id IS NOT NULL)`);
+      where.push(`c.store_id = $${params.length}`);
     }
     const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
-    const total = Number((await this.db.query(`SELECT COUNT(*) AS n FROM customers ${clause}`, params)).rows[0]?.n ?? 0);
+    const total = Number((await this.db.query(`SELECT COUNT(*) AS n FROM customers c ${clause}`, params)).rows[0]?.n ?? 0);
     params.push(limit, offset);
     const { rows } = await this.db.query(
-      `SELECT * FROM customers ${clause} ORDER BY name LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      `${SELECT} ${clause} ORDER BY c.name LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
     );
     const now = this.now();
@@ -88,14 +94,14 @@ export class CustomerService {
   }
 
   async get(id: string) {
-    const { rows } = await this.db.query("SELECT * FROM customers WHERE id = $1", [id]);
+    const { rows } = await this.db.query(`${SELECT} WHERE c.id = $1`, [id]);
     if (!rows[0]) throw new HttpError(404, "Cliente não encontrado", "not_found");
     return mapCustomer(rows[0], this.now());
   }
 
   async setBlocked(id: string, blocked: boolean) {
     await this.get(id);
-    const { rows } = await this.db.query("UPDATE customers SET blocked = $2 WHERE id = $1 RETURNING *", [id, blocked]);
-    return mapCustomer(rows[0], this.now());
+    await this.db.query("UPDATE customers SET blocked = $2 WHERE id = $1", [id, blocked]);
+    return this.get(id);
   }
 }

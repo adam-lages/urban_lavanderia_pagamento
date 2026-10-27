@@ -97,11 +97,11 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 
-describe("página Minhas Lavanderias", () => {
+describe("página Lavanderias", () => {
   it("lista nome, endereço e abre os detalhes", async () => {
     const user = userEvent.setup();
     renderApp("/lavanderias", { token: "dev-admin-token" });
-    expect(await screen.findByRole("heading", { name: "Minhas Lavanderias" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Lavanderias" })).toBeTruthy();
     expect(await screen.findByText("Centro")).toBeTruthy();
     expect(screen.getByText("Rua A, 10")).toBeTruthy();
     expect(screen.getByText("Norte")).toBeTruthy();
@@ -200,7 +200,7 @@ describe("página Minhas Lavanderias", () => {
     await user.click(screen.getByRole("button", { name: "Excluir" }));
     const dialog = screen.getByRole("dialog", { name: "Excluir lavanderia" });
     await user.click(within(dialog).getByRole("button", { name: "Excluir" }));
-    expect(await screen.findByRole("heading", { name: "Minhas Lavanderias" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Lavanderias" })).toBeTruthy();
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/stores/s1") && c[1]?.method === "DELETE")).toBe(true);
   });

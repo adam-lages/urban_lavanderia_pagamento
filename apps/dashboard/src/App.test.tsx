@@ -37,18 +37,18 @@ describe("navegação do dashboard", () => {
     const nav = screen.getByRole("navigation", { name: "Menu principal" });
     for (const item of NAV_ITEMS) expect(nav.textContent).toContain(item.label);
     expect(screen.getByRole("heading", { name: "Início" })).toBeTruthy();
-    expect(await screen.findByText("Quantidade de ciclos")).toBeTruthy();
+    expect(await screen.findByText(/Escolha a unidade/)).toBeTruthy();
   });
 
   it("abre as páginas placeholder pelo menu", async () => {
     const user = userEvent.setup();
     renderApp("/", { token: "dev-admin-token" });
-    await user.click(screen.getByRole("link", { name: "Listagem de clientes" }));
+    await user.click(screen.getByRole("link", { name: "Clientes" }));
     expect(screen.getByRole("heading", { name: "Listagem de clientes" })).toBeTruthy();
-    await user.click(screen.getByRole("link", { name: "Listagem de vendas" }));
+    await user.click(screen.getByRole("link", { name: "Vendas" }));
     expect(screen.getByRole("heading", { name: "Listagem de vendas" })).toBeTruthy();
-    await user.click(screen.getByRole("link", { name: "Minhas Lavanderias" }));
-    expect(screen.getByRole("heading", { name: "Minhas Lavanderias" })).toBeTruthy();
+    await user.click(screen.getByRole("link", { name: "Lavanderias" }));
+    expect(screen.getByRole("heading", { name: "Lavanderias" })).toBeTruthy();
     await user.click(screen.getByRole("link", { name: "Cupons" }));
     expect(screen.getByRole("heading", { name: "Cupons" })).toBeTruthy();
   });

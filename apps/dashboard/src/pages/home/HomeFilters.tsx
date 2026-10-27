@@ -22,7 +22,7 @@ interface Props {
 
 export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPreset, onFrom, onTo, onSearch, onClear }: Props) {
   const custom = preset === "custom";
-  const invalid = !from || !to || to < from;
+  const invalid = !storeId || !from || !to || to < from;
   return (
     <Card>
       <Box
@@ -38,7 +38,6 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
           sx={{ width: { xs: 1, sm: 220 } }}
           slotProps={{ htmlInput: { "aria-label": "Unidade" } }}
         >
-          <MenuItem value="">Todas</MenuItem>
           {stores.map((s) => (
             <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
           ))}

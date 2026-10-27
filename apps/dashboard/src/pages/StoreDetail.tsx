@@ -53,7 +53,7 @@ export function StoreDetail() {
       <PageHeader
         title={store?.name ?? "Lavanderia"}
         crumbs={[
-          { label: "Minhas Lavanderias", to: "/lavanderias" },
+          { label: "Lavanderias", to: "/lavanderias" },
           { label: store?.name ?? "Detalhes" },
         ]}
         action={

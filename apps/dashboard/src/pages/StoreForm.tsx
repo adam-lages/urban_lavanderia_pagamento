@@ -62,7 +62,7 @@ export function StoreForm() {
       <PageHeader
         title={isNew ? "Nova lavanderia" : "Editar lavanderia"}
         crumbs={[
-          { label: "Minhas Lavanderias", to: "/lavanderias" },
+          { label: "Lavanderias", to: "/lavanderias" },
           { label: isNew ? "Nova lavanderia" : "Editar" },
         ]}
       />

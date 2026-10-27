@@ -96,6 +96,7 @@ export function Clients() {
           <Table sx={{ minWidth: 1100 }}>
             <TableHead>
               <TableRow>
+                <TableCell>Unidade</TableCell>
                 <TableCell>Nome</TableCell>
                 <TableCell>Dt Nascimento</TableCell>
                 <TableCell>CPF</TableCell>

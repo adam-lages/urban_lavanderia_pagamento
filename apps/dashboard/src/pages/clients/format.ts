@@ -34,10 +34,11 @@ export function formatCreated(iso: string) {
 }
 
 export function customersCsv(items: Customer[]) {
-  const header = ["Nome", "Dt Nascimento", "Idade", "CPF", "Email", "Celular", "Data Cadastro", "Status"];
+  const header = ["Unidade", "Nome", "Dt Nascimento", "Idade", "CPF", "Email", "Celular", "Data Cadastro", "Status"];
   const lines = items.map((c) => {
     const created = formatCreated(c.createdAt);
     const cols = [
+      c.storeName,
       c.name,
       formatBirth(c.birthDate),
       String(c.age),

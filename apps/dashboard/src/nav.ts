@@ -1,10 +1,10 @@
-export const NAV_SECTIONS = ["Visão geral", "Gestão"] as const;
+export const NAV_SECTIONS = ["Geral", "Listagem", "Gestão", "Promoção"] as const;
 
 export const NAV_ITEMS = [
-  { to: "/", label: "Início", section: "Visão geral" },
-  { to: "/vendas", label: "Listagem de vendas", section: "Visão geral" },
-  { to: "/clientes", label: "Listagem de clientes", section: "Gestão" },
-  { to: "/lavanderias", label: "Minhas Lavanderias", section: "Gestão" },
+  { to: "/", label: "Início", section: "Geral" },
+  { to: "/vendas", label: "Vendas", section: "Listagem" },
+  { to: "/clientes", label: "Clientes", section: "Listagem" },
+  { to: "/lavanderias", label: "Lavanderias", section: "Gestão" },
   { to: "/maquinas", label: "Máquinas", section: "Gestão" },
-  { to: "/cupons", label: "Cupons", section: "Gestão" },
+  { to: "/cupons", label: "Cupons", section: "Promoção" },
 ] as const;

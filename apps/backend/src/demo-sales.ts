@@ -45,7 +45,7 @@ export async function seedSalesIfEmpty(db: Queryable, now: Date = new Date()): P
   if ((await db.query("SELECT 1 FROM orders LIMIT 1")).rows.length) return;
   const rand = mulberry32(20260501);
   const stores = (await db.query("SELECT id FROM stores ORDER BY name")).rows.map((r) => r.id as string);
-  const customers = (await db.query("SELECT id, created_at FROM customers ORDER BY id")).rows;
+  const customers = (await db.query("SELECT id, created_at, store_id FROM customers ORDER BY id")).rows;
   const machines = (await db.query("SELECT id, store_id, kind, device_id, channel FROM machines ORDER BY code")).rows as Row[];
   const prices = (await db.query("SELECT store_id, kind, amount_cents FROM prices")).rows;
   if (!stores.length || !customers.length) return;
@@ -87,7 +87,7 @@ export async function seedSalesIfEmpty(db: Queryable, now: Date = new Date()): P
   };
 
   for (const [index, c] of customers.entries()) {
-    const storeId = stores[index % stores.length]!;
+    const storeId = (c.store_id as string | null) ?? stores[index % stores.length]!;
     const created = saoPauloDay(new Date(c.created_at));
     const firstDay = created > yearStart ? created : yearStart;
     if (firstDay > today) continue;
@@ -97,7 +97,8 @@ export async function seedSalesIfEmpty(db: Queryable, now: Date = new Date()): P
     }
   }
   for (const [s, storeId] of stores.entries()) {
-    const mine = customers.filter((_, i) => i % stores.length === s);
+    const mine = customers.filter((c) => c.store_id === storeId);
+    if (!mine.length) continue;
     for (let i = 0; i < 6; i++) {
       const at = randomMoment(rand, today, today, now);
       if (at) await sell(pick(rand, mine).id, storeId, at);

@@ -89,6 +89,8 @@ describe("página Listagem de vendas", () => {
     expect(await screen.findByRole("heading", { name: "Listagem de vendas" })).toBeTruthy();
     expect(await screen.findByText("Ana Souza")).toBeTruthy();
     expect(screen.getByText("529.982.247-25")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Unidade" })).toBeTruthy();
+    expect(screen.getAllByText("Maranguape 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Lavadora 1").length).toBeGreaterThan(0);
     expect(screen.getByText("PIX")).toBeTruthy();
     expect(screen.getByText("Crédito")).toBeTruthy();

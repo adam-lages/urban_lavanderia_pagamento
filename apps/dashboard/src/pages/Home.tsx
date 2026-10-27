@@ -38,11 +38,14 @@ export function Home() {
     setPreset("today");
     setRange(today);
     setQuery({ storeId: "", ...today });
+    setData(null);
+    setError("");
   };
 
   const load = useCallback(() => {
+    if (!query.storeId) return;
     const params = new URLSearchParams({ from: query.from, to: query.to });
-    if (query.storeId) params.set("storeId", query.storeId);
+    params.set("storeId", query.storeId);
     api<Overview>(`/dashboard/overview?${params}`)
       .then((d) => { setData(d); setError(""); })
       .catch((e) => setError(e.message));
@@ -58,7 +61,7 @@ export function Home() {
 
   return (
     <>
-      <PageHeader title="Início" description="Resumo da operação por unidade e período." />
+      <PageHeader title="Início" />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <HomeFilters
         stores={stores}
@@ -73,7 +76,12 @@ export function Home() {
         onSearch={search}
         onClear={clear}
       />
-      {data && recurrence && (
+      {!query.storeId && (
+        <Alert severity="info" sx={{ mt: 3 }}>
+          Escolha a unidade e o período e clique em Pesquisar para ver os gráficos.
+        </Alert>
+      )}
+      {query.storeId && data && recurrence && (
         <Grid container spacing={3} sx={{ mt: 3 }}>
           <Grid size={{ xs: 12, md: 4 }}>
             <StatCard
@@ -157,10 +165,10 @@ export function Home() {
           </Grid>
 
           <Grid size={{ xs: 12, md: 6 }}>
-            <MachineRevenueCard title="Faturamento por máquina de lavar" color="secondary" machines={washers} showStore={!query.storeId} />
+            <MachineRevenueCard title="Faturamento por máquina de lavar" color="secondary" machines={washers} />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
-            <MachineRevenueCard title="Faturamento por máquina de secar" color="warning" machines={dryers} showStore={!query.storeId} />
+            <MachineRevenueCard title="Faturamento por máquina de secar" color="warning" machines={dryers} />
           </Grid>
 
           <Grid size={{ xs: 12, md: 7 }}>

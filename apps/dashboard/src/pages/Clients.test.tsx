@@ -13,6 +13,8 @@ const ana: Customer = {
   email: "ana.souza@email.com",
   phone: "5581981110001",
   blocked: false,
+  storeId: "loja-algarve",
+  storeName: "Algarve",
   createdAt: "2026-01-12T10:15:00.000Z",
 };
 const carla: Customer = {
@@ -123,6 +125,8 @@ describe("página Listagem de clientes", () => {
     expect(await screen.findByRole("heading", { name: "Listagem de clientes" })).toBeTruthy();
     expect(await screen.findByText("Ana Souza")).toBeTruthy();
     expect(screen.getByText("529.982.247-25")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Unidade" })).toBeTruthy();
+    expect(screen.getAllByText("Algarve").length).toBeGreaterThan(0);
     expect(screen.getAllByText("34 anos").length).toBeGreaterThan(0);
     expect(screen.getByText("ATIVO")).toBeTruthy();
     expect(screen.getByText("BLOQUEADO")).toBeTruthy();
