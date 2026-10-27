@@ -86,11 +86,20 @@ beforeEach(() => {
       const filtered = customerId === "cli-ana" ? anaSales : [];
       return json({ items: filtered, total: filtered.length });
     }
+    if (parsed.pathname === "/api/stores") {
+      return json([
+        { id: "loja-maranguape-1", name: "Maranguape 1", code: "10000001", address: "", active: true },
+        { id: "loja-algarve", name: "Algarve", code: "10000003", address: "", active: true },
+      ]);
+    }
     if (parsed.pathname === "/api/customers") {
       const name = (parsed.searchParams.get("name") ?? "").toLowerCase();
       const cpf = (parsed.searchParams.get("cpf") ?? "").replace(/\D/g, "");
+      const storeId = parsed.searchParams.get("storeId") ?? "";
       const filtered = items.filter((c) =>
-        (!name || c.name.toLowerCase().includes(name)) && (!cpf || c.cpf.includes(cpf)),
+        (!name || c.name.toLowerCase().includes(name)) &&
+        (!cpf || c.cpf.includes(cpf)) &&
+        (!storeId || (storeId === "loja-maranguape-1" && c.id === "cli-ana")),
       );
       const page = Number(parsed.searchParams.get("page") ?? 0);
       const limit = Number(parsed.searchParams.get("limit") ?? 10);
@@ -151,6 +160,20 @@ describe("página Listagem de clientes", () => {
     await user.click(screen.getByRole("button", { name: "Limpar" }));
     expect(await screen.findByText("Carla Mendes")).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Filtrar por nome" })).toHaveProperty("value", "");
+  });
+
+  it("filtra os clientes pela lavanderia só ao pesquisar", async () => {
+    const user = userEvent.setup();
+    renderApp("/clientes", { token: "dev-admin-token" });
+    await screen.findByText("Carla Mendes");
+    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
+    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
+    expect(screen.getByText("Carla Mendes")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+    await waitFor(() => expect(screen.queryByText("Carla Mendes")).toBeNull());
+    expect(screen.getByText("Ana Souza")).toBeTruthy();
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("storeId=loja-maranguape-1"))).toBe(true);
   });
 
   it("exporta a planilha com os clientes", async () => {

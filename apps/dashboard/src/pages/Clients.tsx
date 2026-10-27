@@ -13,37 +13,44 @@ import { useNavigate } from "react-router-dom";
 import { api, type Customer, type CustomerPage } from "../api";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
+import { useStores } from "../hooks";
 import { ClientRow } from "./clients/ClientRow";
 import { ClientsToolbar } from "./clients/ClientsToolbar";
 import { customersCsv, downloadCsv } from "./clients/format";
 
+const NO_FILTER = { storeId: "", name: "", cpf: "" };
+
 export function Clients() {
   const navigate = useNavigate();
+  const { stores } = useStores();
+  const [storeId, setStoreId] = useState("");
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
-  const [query, setQuery] = useState({ name: "", cpf: "" });
+  const [query, setQuery] = useState(NO_FILTER);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState("");
 
+  const filtered = Boolean(query.storeId || query.name || query.cpf);
+
   const search = () => {
-    setQuery({ name, cpf });
+    setQuery({ storeId, name, cpf });
     setPage(0);
   };
 
   const clearFilters = () => {
+    setStoreId("");
     setName("");
     setCpf("");
-    setQuery({ name: "", cpf: "" });
+    setQuery(NO_FILTER);
     setPage(0);
   };
 
   const load = useCallback(() => {
     const params = new URLSearchParams({
-      name: query.name,
-      cpf: query.cpf,
+      ...query,
       page: String(page),
       limit: String(rowsPerPage),
     });
@@ -60,7 +67,7 @@ export function Clients() {
 
   const exportSheet = async () => {
     try {
-      const params = new URLSearchParams({ name: query.name, cpf: query.cpf, page: "0", limit: "100" });
+      const params = new URLSearchParams({ ...query, page: "0", limit: "100" });
       const data = await api<CustomerPage>(`/customers?${params}`);
       downloadCsv("clientes.csv", customersCsv(data.items));
     } catch (e) {
@@ -74,8 +81,11 @@ export function Clients() {
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Card>
         <ClientsToolbar
+          stores={stores}
+          storeId={storeId}
           name={name}
           cpf={cpf}
+          onStore={setStoreId}
           onName={setName}
           onCpf={setCpf}
           onSearch={search}
@@ -106,8 +116,8 @@ export function Clients() {
         {!items.length && (
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
-              title={query.name || query.cpf ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-              description={query.name || query.cpf ? "Ajuste o filtro de nome ou CPF." : "Os clientes da operação vão aparecer aqui."}
+              title={filtered ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+              description={filtered ? "Ajuste a lavanderia, o nome ou o CPF." : "Os clientes da operação vão aparecer aqui."}
             />
           </Box>
         )}

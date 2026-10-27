@@ -31,6 +31,18 @@ describe("clientes", () => {
     expect(byCpf.items[0].cpf).toBe("52998224725");
   });
 
+  it("filtra os clientes pela lavanderia onde compraram", async () => {
+    await s.db.query("INSERT INTO stores (id, name, code, created_at) VALUES ('st-a','A','10000001',now()), ('st-b','B','10000002',now())");
+    await s.db.query(
+      "INSERT INTO orders (id, store_id, status, total_cents, customer_id, created_at, paid_at) VALUES ('o-1','st-a','PAID',100,'cli-ana',now(),now()), ('o-2','st-b','PAID',100,'cli-bruno',now(),now())",
+    );
+    const a = (await s.app.inject({ method: "GET", url: "/customers?storeId=st-a", headers: ADMIN })).json();
+    expect(a.total).toBe(1);
+    expect(a.items[0].id).toBe("cli-ana");
+    const none = (await s.app.inject({ method: "GET", url: "/customers?storeId=st-x", headers: ADMIN })).json();
+    expect(none.total).toBe(0);
+  });
+
   it("busca um cliente e recusa quem não é admin", async () => {
     const one = await s.app.inject({ method: "GET", url: "/customers/cli-ana", headers: ADMIN });
     expect(one.statusCode).toBe(200);

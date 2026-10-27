@@ -56,8 +56,9 @@ export function mapCustomer(r: any, now = new Date()): Customer {
 export class CustomerService {
   constructor(private db: Db, private now: () => Date = () => new Date()) {}
 
-  async list(input: { name?: string; cpf?: string; page: number; limit: number }) {
+  async list(input: { name?: string; cpf?: string; storeId?: string; page: number; limit: number }) {
     const name = input.name?.trim() || "";
+    const storeId = input.storeId?.trim() || "";
     const cpf = digits(input.cpf ?? "");
     const limit = input.limit;
     const offset = input.page * limit;
@@ -70,6 +71,10 @@ export class CustomerService {
     if (cpf) {
       params.push(`%${cpf}%`);
       where.push(`cpf LIKE $${params.length}`);
+    }
+    if (storeId) {
+      params.push(storeId);
+      where.push(`id IN (SELECT customer_id FROM orders WHERE store_id = $${params.length} AND customer_id IS NOT NULL)`);
     }
     const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const total = Number((await this.db.query(`SELECT COUNT(*) AS n FROM customers ${clause}`, params)).rows[0]?.n ?? 0);

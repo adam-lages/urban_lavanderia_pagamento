@@ -71,6 +71,7 @@ export class OrderService {
       const m = (await this.db.query("SELECT * FROM machines WHERE id = $1", [id])).rows[0];
       if (!m || m.store_id !== input.storeId || !m.active)
         throw new HttpError(422, `Máquina indisponível: ${id}`, "machine_unavailable");
+      if (!m.device_id) throw new HttpError(422, `Máquina sem placa ESP32: ${m.label}`, "machine_without_device");
       let price: number | null = m.price_override_cents;
       if (price === null || price === undefined) {
         const p = (

@@ -130,6 +130,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     const q = z.object({
       name: z.string().optional(),
       cpf: z.string().optional(),
+      storeId: z.string().optional(),
       page: z.coerce.number().int().min(0).default(0),
       limit: z.coerce.number().int().min(1).max(100).default(10),
     }).parse(req.query);
@@ -369,7 +370,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     res.status(202).json(mapCommand(c));
   }));
   app.get("/devices", requireAdmin, run(async (_req, res) => {
-    const { rows } = await db.query("SELECT DISTINCT device_id FROM machines");
+    const { rows } = await db.query("SELECT DISTINCT device_id FROM machines WHERE device_id IS NOT NULL");
     res.json(rows.map((r) => ({ deviceId: r.device_id, online: gateway.isOnline(r.device_id) })));
   }));
 

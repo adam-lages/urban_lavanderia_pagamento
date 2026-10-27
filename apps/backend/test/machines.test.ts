@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ADMIN, seed, startStack, type Stack } from "./helpers.js";
+import { ADMIN, POS, seed, startStack, type Stack } from "./helpers.js";
 
 let s: Stack;
 beforeEach(async () => {
@@ -72,6 +72,26 @@ describe("máquinas", () => {
     expect(created.statusCode).toBe(201);
     expect(created.json().deviceId).toBe("");
     expect(created.json().status).toBe("OFFLINE");
+  });
+
+  it("não vende máquina sem placa ESP32 e não quebra a lista de placas", async () => {
+    const { store } = await seed(s);
+    const bare = (await s.app.inject({
+      method: "POST",
+      url: "/machines",
+      headers: ADMIN,
+      payload: { storeId: store.id, kind: "WASHER", label: "Lavadora 9", channel: 100 },
+    })).json();
+    const order = await s.app.inject({
+      method: "POST",
+      url: "/orders",
+      headers: POS,
+      payload: { storeId: store.id, machineIds: [bare.id] },
+    });
+    expect(order.statusCode).toBe(422);
+    expect(order.json().error).toBe("machine_without_device");
+    const devices = (await s.app.inject({ method: "GET", url: "/devices", headers: ADMIN })).json();
+    expect(devices.every((d: { deviceId: string | null }) => d.deviceId)).toBe(true);
   });
 
   it("recusa a mesma placa ESP32 em duas máquinas", async () => {
