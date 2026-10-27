@@ -32,6 +32,7 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
       >
         <TextField
           select
+          size="small"
           value={storeId}
           onChange={(e) => onStore(e.target.value)}
           label="Unidade"
@@ -44,6 +45,7 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
         </TextField>
         <TextField
           select
+          size="small"
           value={preset}
           onChange={(e) => onPreset(e.target.value as PeriodPreset)}
           label="Período"
@@ -56,6 +58,7 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
         </TextField>
         <TextField
           type="date"
+          size="small"
           label="Data inicial"
           value={from}
           onChange={(e) => onFrom(e.target.value)}
@@ -65,6 +68,7 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
         />
         <TextField
           type="date"
+          size="small"
           label="Data final"
           value={to}
           onChange={(e) => onTo(e.target.value)}

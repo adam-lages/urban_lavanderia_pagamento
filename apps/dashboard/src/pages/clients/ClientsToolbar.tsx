@@ -29,6 +29,7 @@ export function ClientsToolbar({ stores, storeId, name, cpf, onStore, onName, on
     >
       <TextField
         select
+        size="small"
         fullWidth={false}
         value={storeId}
         onChange={(e) => onStore(e.target.value)}
@@ -42,6 +43,7 @@ export function ClientsToolbar({ stores, storeId, name, cpf, onStore, onName, on
         ))}
       </TextField>
       <TextField
+        size="small"
         fullWidth={false}
         value={name}
         onChange={(e) => onName(e.target.value)}
@@ -59,6 +61,7 @@ export function ClientsToolbar({ stores, storeId, name, cpf, onStore, onName, on
         }}
       />
       <TextField
+        size="small"
         fullWidth={false}
         value={cpf}
         onChange={(e) => onCpf(e.target.value)}

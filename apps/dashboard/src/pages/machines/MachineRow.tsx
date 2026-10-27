@@ -1,10 +1,8 @@
-import ArrowForwardIosRounded from "@mui/icons-material/ArrowForwardIosRounded";
-import IconButton from "@mui/material/IconButton";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { machineStatusLabel, type Machine } from "../../api";
+import { DetailsButton } from "../../components/DetailsButton";
 import { Label } from "../../components/Label";
 import { formatDateParts } from "./format";
 
@@ -40,11 +38,7 @@ export function MachineRow({ machine: m, onDetails }: { machine: Machine; onDeta
         <Typography variant="caption" color="text.disabled">{blocked.time}</Typography>
       </TableCell>
       <TableCell align="right">
-        <Tooltip title="Detalhes">
-          <IconButton aria-label={`Detalhes de ${m.label}`} onClick={onDetails}>
-            <ArrowForwardIosRounded sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
+        <DetailsButton label={`Detalhes de ${m.label}`} onClick={onDetails} />
       </TableCell>
     </TableRow>
   );

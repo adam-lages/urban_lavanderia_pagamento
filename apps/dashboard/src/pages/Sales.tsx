@@ -13,6 +13,7 @@ import { api, type Sale, type SalePage } from "../api";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
 import { useStores } from "../hooks";
+import { SaleDetails } from "./sales/SaleDetails";
 import { SaleRow } from "./sales/SaleRow";
 import { SalesToolbar } from "./sales/SalesToolbar";
 
@@ -26,6 +27,7 @@ export function Sales() {
   const [items, setItems] = useState<Sale[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState<Sale | null>(null);
 
   const search = () => {
     setQuery({ storeId, customerName });
@@ -59,7 +61,7 @@ export function Sales() {
 
   return (
     <>
-      <PageHeader title="Listagem de vendas" description="Vendas pagas nas lavanderias." />
+      <PageHeader title="Listagem de vendas" />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Card>
         <SalesToolbar
@@ -72,7 +74,7 @@ export function Sales() {
           onClear={clearFilters}
         />
         <TableContainer>
-          <Table sx={{ minWidth: 1280 }}>
+          <Table sx={{ minWidth: 960 }}>
             <TableHead>
               <TableRow>
                 <TableCell>Unidade</TableCell>
@@ -82,15 +84,12 @@ export function Sales() {
                 <TableCell>Valor pago</TableCell>
                 <TableCell>Método</TableCell>
                 <TableCell>Cupom</TableCell>
-                <TableCell>Voucher</TableCell>
-                <TableCell>Stone Authcode</TableCell>
-                <TableCell>Bandeira</TableCell>
-                <TableCell>Número do cartão</TableCell>
+                <TableCell />
               </TableRow>
             </TableHead>
             <TableBody>
               {items.map((s) => (
-                <SaleRow key={s.id} sale={s} />
+                <SaleRow key={s.id} sale={s} onDetails={() => setSelected(s)} />
               ))}
             </TableBody>
           </Table>
@@ -115,6 +114,7 @@ export function Sales() {
           labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
         />
       </Card>
+      <SaleDetails sale={selected} onClose={() => setSelected(null)} />
     </>
   );
 }

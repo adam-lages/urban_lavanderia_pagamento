@@ -40,6 +40,7 @@ export function MachinesToolbar({ stores, storeId, filter, counts, onStore, onFi
       <Box sx={{ p: 2.5 }}>
         <TextField
           select
+          size="small"
           fullWidth={false}
           value={storeId}
           onChange={(e) => onStore(e.target.value)}

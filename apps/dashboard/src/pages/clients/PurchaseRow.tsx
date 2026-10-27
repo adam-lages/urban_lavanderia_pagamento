@@ -2,19 +2,18 @@ import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { brl, type Sale } from "../../api";
-import { dash, paymentMethodLabel } from "../sales/format";
+import { DetailsButton } from "../../components/DetailsButton";
+import { dash, formatPaidAt, paymentMethodLabel } from "../sales/format";
 
-export function PurchaseRow({ sale: s }: { sale: Sale }) {
-  const when = s.paidAt ? new Date(s.paidAt) : null;
+export function PurchaseRow({ sale: s, onDetails }: { sale: Sale; onDetails: () => void }) {
+  const when = formatPaidAt(s.paidAt);
   return (
     <TableRow hover>
       <TableCell sx={{ whiteSpace: "nowrap" }}>
-        {when ? (
+        {s.paidAt ? (
           <>
-            <Typography variant="body2">{when.toLocaleDateString("pt-BR")}</Typography>
-            <Typography variant="caption" color="text.disabled">
-              {when.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </Typography>
+            <Typography variant="body2">{when.date}</Typography>
+            <Typography variant="caption" color="text.disabled">{when.time}</Typography>
           </>
         ) : "—"}
       </TableCell>
@@ -22,10 +21,9 @@ export function PurchaseRow({ sale: s }: { sale: Sale }) {
       <TableCell sx={{ whiteSpace: "nowrap" }}>{brl(s.amountCents)}</TableCell>
       <TableCell>{paymentMethodLabel(s.paymentMethod)}</TableCell>
       <TableCell>{dash(s.couponCode)}</TableCell>
-      <TableCell>{dash(s.voucherCode)}</TableCell>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>{dash(s.authCode)}</TableCell>
-      <TableCell>{dash(s.cardBrand)}</TableCell>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>{dash(s.cardNumber)}</TableCell>
+      <TableCell align="right">
+        <DetailsButton label={`Detalhes da venda em ${s.machineLabel}`} onClick={onDetails} />
+      </TableCell>
     </TableRow>
   );
 }

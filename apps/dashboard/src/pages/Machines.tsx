@@ -69,7 +69,6 @@ export function Machines() {
     <>
       <PageHeader
         title="Máquinas"
-        description="Lavadoras e secadoras cadastradas em cada lavanderia."
         action={
           <Button
             variant="contained"

@@ -92,11 +92,6 @@ export const components: Components<Theme> = {
     styleOverrides: { tooltip: { backgroundColor: GREY[800], borderRadius: 6, fontSize: 12 } },
   },
   MuiBreadcrumbs: { styleOverrides: { separator: { color: GREY[500] } } },
-  MuiDrawer: {
-    styleOverrides: {
-      paper: { width: DRAWER_WIDTH, boxSizing: "border-box", borderRight: `1px dashed ${alpha(GREY[500], 0.24)}` },
-    },
-  },
   MuiListItemButton: {
     styleOverrides: {
       root: {

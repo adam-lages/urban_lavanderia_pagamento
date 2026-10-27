@@ -13,5 +13,6 @@ Figma: https://www.figma.com/design/WadcoP3CSejUDj7YZc87xj/-Preview--Minimal-Web
 1. Tente o MCP do Figma (`create_session` + `get_design_context` / screenshot) no node correspondente.
 2. Se não houver acesso ao arquivo, use o mesmo padrão já no código: `apps/dashboard/src/theme/` + componentes em `apps/dashboard/src/components/` (`PageHeader`, `Label`, `EmptyContent`, `ConfirmDialog`, `Logo`).
 3. Implemente com **Material UI** (`@mui/material`), tokens do tema (Public Sans, cores da marca Urban Lavanderia: primária `#313e78`, secundária `#23afde`, alternativa `#ffd951`, cards 16px, sombras suaves). Não recrie CSS solto para botão, input, select, checkbox, tabela ou chip.
+4. Filtros de listagem (toolbar, busca, unidade, período): `TextField`/`Select` com `size="small"` e botões no tamanho padrão (`medium`). Não use `size="small"` nos botões do filtro. Formulários de cadastro/edição e login ficam no tamanho padrão.
 
 Não aplique esta regra em ajuste pontual (texto, bug, prop). Só quando o componente for novo ou a tela precisar de composição visual.

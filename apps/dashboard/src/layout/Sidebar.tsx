@@ -13,10 +13,18 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import ListSubheader from "@mui/material/ListSubheader";
 import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
 import { NavLink } from "react-router-dom";
 import { Logo } from "../components/Logo";
 import { NAV_ITEMS, NAV_SECTIONS } from "../nav";
 import { DRAWER_WIDTH, HEADER_HEIGHT } from "../theme";
+import { GREY } from "../theme/palette";
+
+const navPaper = {
+  width: DRAWER_WIDTH,
+  boxSizing: "border-box" as const,
+  borderRight: `1px dashed ${alpha(GREY[500], 0.24)}`,
+};
 
 const ICONS: Record<(typeof NAV_ITEMS)[number]["to"], SvgIconComponent> = {
   "/": DashboardOutlined,
@@ -75,11 +83,12 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose:
         open={mobileOpen}
         onClose={onClose}
         ModalProps={{ keepMounted: false }}
+        slotProps={{ paper: { sx: navPaper } }}
         sx={{ display: { xs: "block", lg: "none" } }}
       >
         <NavContent onNavigate={onClose} />
       </Drawer>
-      <Drawer variant="permanent" open sx={{ display: { xs: "none", lg: "block" } }}>
+      <Drawer variant="permanent" open slotProps={{ paper: { sx: navPaper } }} sx={{ display: { xs: "none", lg: "block" } }}>
         <NavContent />
       </Drawer>
     </Box>

@@ -95,8 +95,23 @@ describe("página Listagem de vendas", () => {
     expect(screen.getByText("PIX")).toBeTruthy();
     expect(screen.getByText("Crédito")).toBeTruthy();
     expect(screen.getByText("LAVA10")).toBeTruthy();
+    expect(screen.queryByRole("columnheader", { name: "Voucher" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Stone Authcode" })).toBeNull();
+    expect(screen.queryByText("A1B2C3")).toBeNull();
+    expect(screen.queryByText("Mastercard")).toBeNull();
+  });
+
+  it("abre o painel lateral com os dados da venda", async () => {
+    const user = userEvent.setup();
+    renderApp("/vendas", { token: "dev-admin-token" });
+    await screen.findByText("Bruno Lima");
+    await user.click(screen.getByRole("button", { name: "Detalhes da venda de Bruno Lima" }));
+    expect(await screen.findByRole("heading", { name: "Detalhes da venda" })).toBeTruthy();
     expect(screen.getByText("A1B2C3")).toBeTruthy();
     expect(screen.getByText("Mastercard")).toBeTruthy();
+    expect(screen.getByText("**** 4412")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Fechar detalhes" }));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Detalhes da venda" })).toBeNull());
   });
 
   it("filtra por lavanderia e por nome só ao pesquisar", async () => {

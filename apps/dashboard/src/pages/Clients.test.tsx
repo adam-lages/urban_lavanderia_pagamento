@@ -127,7 +127,8 @@ describe("página Listagem de clientes", () => {
     expect(screen.getByText("529.982.247-25")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Unidade" })).toBeTruthy();
     expect(screen.getAllByText("Algarve").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("34 anos").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("columnheader", { name: "Dt Nascimento" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Email" })).toBeNull();
     expect(screen.getByText("ATIVO")).toBeTruthy();
     expect(screen.getByText("BLOQUEADO")).toBeTruthy();
     const whats = screen.getAllByRole("link", { name: "WhatsApp" });
@@ -145,6 +146,9 @@ describe("página Listagem de clientes", () => {
     expect(screen.getByText("Secadora 1")).toBeTruthy();
     expect(screen.getByText("PIX")).toBeTruthy();
     expect(screen.getByText("Débito")).toBeTruthy();
+    expect(screen.queryByText("D4E5F6")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Detalhes da venda em Secadora 1" }));
+    expect(await screen.findByRole("heading", { name: "Detalhes da venda" })).toBeTruthy();
     expect(screen.getByText("D4E5F6")).toBeTruthy();
     expect(screen.getByText("Visa")).toBeTruthy();
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("customerId=cli-ana"))).toBe(true);

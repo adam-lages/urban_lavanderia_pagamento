@@ -1,11 +1,9 @@
 import AddRounded from "@mui/icons-material/AddRounded";
-import ArrowForwardIosRounded from "@mui/icons-material/ArrowForwardIosRounded";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
-import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -15,11 +13,11 @@ import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Store } from "../api";
+import { DetailsButton } from "../components/DetailsButton";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
 import { useStores } from "../hooks";
@@ -43,7 +41,6 @@ export function Stores() {
     <>
       <PageHeader
         title="Lavanderias"
-        description="Cadastre e edite as lojas da operação."
         action={
           <Button variant="contained" color="inherit" startIcon={<AddRounded />} onClick={() => navigate("/lavanderias/nova")}>
             Nova lavanderia
@@ -54,6 +51,7 @@ export function Stores() {
       <Card>
         <Box sx={{ p: 2.5 }}>
           <TextField
+            size="small"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             placeholder="Buscar por nome ou endereço…"
@@ -89,11 +87,7 @@ export function Stores() {
                   </TableCell>
                   <TableCell>{store.address || "—"}</TableCell>
                   <TableCell align="right">
-                    <Tooltip title="Detalhes">
-                      <IconButton aria-label={`Detalhes de ${store.name}`}>
-                        <ArrowForwardIosRounded sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
+                    <DetailsButton label={`Detalhes de ${store.name}`} />
                   </TableCell>
                 </TableRow>
               ))}

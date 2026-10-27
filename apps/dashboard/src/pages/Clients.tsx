@@ -77,7 +77,7 @@ export function Clients() {
 
   return (
     <>
-      <PageHeader title="Listagem de clientes" description="Clientes cadastrados na operação." />
+      <PageHeader title="Listagem de clientes" />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Card>
         <ClientsToolbar
@@ -93,14 +93,12 @@ export function Clients() {
           onExport={() => void exportSheet()}
         />
         <TableContainer>
-          <Table sx={{ minWidth: 1100 }}>
+          <Table sx={{ minWidth: 880 }}>
             <TableHead>
               <TableRow>
                 <TableCell>Unidade</TableCell>
                 <TableCell>Nome</TableCell>
-                <TableCell>Dt Nascimento</TableCell>
                 <TableCell>CPF</TableCell>
-                <TableCell>Email</TableCell>
                 <TableCell>Celular</TableCell>
                 <TableCell>Data Cadastro</TableCell>
                 <TableCell>Status</TableCell>

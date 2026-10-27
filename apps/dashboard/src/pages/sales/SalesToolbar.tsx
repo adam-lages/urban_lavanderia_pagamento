@@ -33,6 +33,7 @@ export function SalesToolbar({
     >
       <TextField
         select
+        size="small"
         fullWidth={false}
         value={storeId}
         onChange={(e) => onStore(e.target.value)}
@@ -46,6 +47,7 @@ export function SalesToolbar({
         ))}
       </TextField>
       <TextField
+        size="small"
         fullWidth={false}
         value={customerName}
         onChange={(e) => onCustomerName(e.target.value)}

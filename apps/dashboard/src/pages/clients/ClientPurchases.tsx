@@ -11,6 +11,7 @@ import TableRow from "@mui/material/TableRow";
 import { useCallback, useEffect, useState } from "react";
 import { api, type Sale, type SalePage } from "../../api";
 import { EmptyContent } from "../../components/EmptyContent";
+import { SaleDetails } from "../sales/SaleDetails";
 import { PurchaseRow } from "./PurchaseRow";
 
 export function ClientPurchases({ customerId }: { customerId: string }) {
@@ -20,6 +21,7 @@ export function ClientPurchases({ customerId }: { customerId: string }) {
   const [total, setTotal] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState<Sale | null>(null);
 
   const load = useCallback(() => {
     const params = new URLSearchParams({
@@ -43,7 +45,7 @@ export function ClientPurchases({ customerId }: { customerId: string }) {
     <Card>
       {error && <Alert severity="error" sx={{ m: 2.5, mb: 0 }}>{error}</Alert>}
       <TableContainer>
-        <Table sx={{ minWidth: 1100 }}>
+        <Table sx={{ minWidth: 800 }}>
           <TableHead>
             <TableRow>
               <TableCell>Data e hora da compra</TableCell>
@@ -51,15 +53,12 @@ export function ClientPurchases({ customerId }: { customerId: string }) {
               <TableCell>Valor pago</TableCell>
               <TableCell>MT Pagamento</TableCell>
               <TableCell>Cupom</TableCell>
-              <TableCell>Voucher</TableCell>
-              <TableCell>Stone Authcode</TableCell>
-              <TableCell>Bandeira</TableCell>
-              <TableCell>N. Cartão</TableCell>
+              <TableCell />
             </TableRow>
           </TableHead>
           <TableBody>
             {items.map((s) => (
-              <PurchaseRow key={s.id} sale={s} />
+              <PurchaseRow key={s.id} sale={s} onDetails={() => setSelected(s)} />
             ))}
           </TableBody>
         </Table>
@@ -83,6 +82,7 @@ export function ClientPurchases({ customerId }: { customerId: string }) {
         labelRowsPerPage="Linhas por página:"
         labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
       />
+      <SaleDetails sale={selected} onClose={() => setSelected(null)} />
     </Card>
   );
 }

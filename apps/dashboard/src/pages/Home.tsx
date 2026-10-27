@@ -63,6 +63,11 @@ export function Home() {
     <>
       <PageHeader title="Início" />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {!query.storeId && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Escolha a unidade e o período e clique em Pesquisar para ver os gráficos.
+        </Alert>
+      )}
       <HomeFilters
         stores={stores}
         storeId={storeId}
@@ -76,11 +81,6 @@ export function Home() {
         onSearch={search}
         onClear={clear}
       />
-      {!query.storeId && (
-        <Alert severity="info" sx={{ mt: 3 }}>
-          Escolha a unidade e o período e clique em Pesquisar para ver os gráficos.
-        </Alert>
-      )}
       {query.storeId && data && recurrence && (
         <Grid container spacing={3} sx={{ mt: 3 }}>
           <Grid size={{ xs: 12, md: 4 }}>

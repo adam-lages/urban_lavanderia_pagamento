@@ -2,11 +2,12 @@ import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { brl, type Sale } from "../../api";
+import { DetailsButton } from "../../components/DetailsButton";
 import { formatCpf } from "../clients/format";
-import { dash, paymentMethodLabel } from "./format";
+import { dash, formatPaidAt, paymentMethodLabel } from "./format";
 
-export function SaleRow({ sale: s }: { sale: Sale }) {
-  const when = s.paidAt ? new Date(s.paidAt) : null;
+export function SaleRow({ sale: s, onDetails }: { sale: Sale; onDetails: () => void }) {
+  const when = formatPaidAt(s.paidAt);
   return (
     <TableRow hover>
       <TableCell sx={{ whiteSpace: "nowrap" }}>{s.storeName}</TableCell>
@@ -18,22 +19,19 @@ export function SaleRow({ sale: s }: { sale: Sale }) {
       </TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>{s.machineLabel}</TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>
-        {when ? (
+        {s.paidAt ? (
           <>
-            <Typography variant="body2">{when.toLocaleDateString("pt-BR")}</Typography>
-            <Typography variant="caption" color="text.disabled">
-              {when.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </Typography>
+            <Typography variant="body2">{when.date}</Typography>
+            <Typography variant="caption" color="text.disabled">{when.time}</Typography>
           </>
         ) : "—"}
       </TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>{brl(s.amountCents)}</TableCell>
       <TableCell>{paymentMethodLabel(s.paymentMethod)}</TableCell>
       <TableCell>{dash(s.couponCode)}</TableCell>
-      <TableCell>{dash(s.voucherCode)}</TableCell>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>{dash(s.authCode)}</TableCell>
-      <TableCell>{dash(s.cardBrand)}</TableCell>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>{dash(s.cardNumber)}</TableCell>
+      <TableCell align="right">
+        <DetailsButton label={`Detalhes da venda de ${s.customerName || s.machineLabel}`} onClick={onDetails} />
+      </TableCell>
     </TableRow>
   );
 }
