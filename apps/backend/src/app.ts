@@ -109,6 +109,9 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   app.get("/stores", requireAdmin, run(async (_req, res) => {
     res.json(await stores.list());
   }));
+  app.get("/stores/next-code", requireAdmin, run(async (_req, res) => {
+    res.json({ code: await stores.uniqueCode() });
+  }));
   app.post("/stores", requireAdmin, run(async (req, res) => {
     const b = storeBody.extend({ name: z.string().trim().min(1).max(80) }).parse(req.body);
     res.status(201).json(await stores.create(b));

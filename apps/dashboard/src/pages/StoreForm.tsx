@@ -18,10 +18,20 @@ export function StoreForm() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(isNew);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (isNew || !id) return;
+    if (isNew) {
+      api<{ code: string }>("/stores/next-code")
+        .then((r) => {
+          setCode(r.code);
+          setLoaded(true);
+          setError("");
+        })
+        .catch((e) => setError(e.message));
+      return;
+    }
+    if (!id) return;
     api<Store>(`/stores/${id}`)
       .then((s) => {
         setName(s.name);
@@ -39,11 +49,10 @@ export function StoreForm() {
     e.preventDefault();
     setSaving(true);
     try {
-      const digits = code.replace(/\D/g, "");
       if (isNew) {
         const created = await api<Store>("/stores", {
           method: "POST",
-          body: { name: name.trim(), address: address.trim(), code: digits || undefined },
+          body: { name: name.trim(), address: address.trim(), code },
         });
         navigate(`/lavanderias/${created.id}`);
       } else {
@@ -89,19 +98,15 @@ export function StoreForm() {
               <TextField
                 label="Código"
                 value={code}
-                onChange={(e) => {
-                  if (!isNew) return;
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 8));
-                }}
-                disabled={!isNew}
-                helperText={isNew ? "Numérico, 8 dígitos. Se vazio, o sistema gera um." : "Gerado na criação. Não pode ser alterado."}
-                slotProps={{ htmlInput: { "aria-label": "Código", inputMode: "numeric", readOnly: !isNew } }}
+                disabled
+                helperText="Gerado automaticamente. Não pode ser alterado."
+                slotProps={{ htmlInput: { "aria-label": "Código", readOnly: true } }}
               />
               <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
                 <Button variant="outlined" color="inherit" onClick={() => navigate(cancelTo)}>
                   Cancelar
                 </Button>
-                <Button type="submit" variant="contained" color="inherit" disabled={saving || !name.trim()}>
+                <Button type="submit" variant="contained" color="inherit" disabled={saving || !name.trim() || (isNew && !code)}>
                   {saving ? "Salvando…" : "Salvar"}
                 </Button>
               </Stack>

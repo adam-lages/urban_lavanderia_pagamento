@@ -55,10 +55,20 @@ describe("lavanderias", () => {
     expect((await s.app.inject({ method: "GET", url: `/stores/${store.id}`, headers: ADMIN })).statusCode).toBe(404);
   });
 
+  it("gera código de 8 dígitos que ainda não existe no banco", async () => {
+    await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "A", code: "10000001" } });
+    const next = await s.app.inject({ method: "GET", url: "/stores/next-code", headers: ADMIN });
+    expect(next.statusCode).toBe(200);
+    expect(next.json().code).toMatch(/^\d{8}$/);
+    const existing = (await s.app.inject({ method: "GET", url: "/stores", headers: ADMIN })).json();
+    expect(existing.some((row: { code: string }) => row.code === next.json().code)).toBe(false);
+  });
+
   it("recusa código duplicado", async () => {
     await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "A", code: "10000001" } });
     const dup = await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "B", code: "10000001" } });
     expect(dup.statusCode).toBe(409);
+    expect(dup.json().message).toMatch(/código/);
   });
 
   it("exclui lavanderia sem vendas e remove máquinas", async () => {

@@ -65,6 +65,7 @@ beforeEach(() => {
       return json({ id: "cmd-1", status: "PENDING", deviceId: "esp-1" }, 202);
     }
     if (url.endsWith("/api/stores") && method === "GET") return json(stores);
+    if (url.endsWith("/api/stores/next-code") && method === "GET") return json({ code: "84729100" });
     if (url.endsWith("/api/stores") && method === "POST") {
       const body = JSON.parse(String(init?.body));
       const created = { id: "s3", name: body.name, code: body.code ?? "NEW", address: body.address ?? "", active: true };
@@ -108,6 +109,10 @@ describe("página Lavanderias", () => {
     await user.click(screen.getByRole("button", { name: "Detalhes de Centro" }));
     expect(await screen.findByRole("heading", { name: "Centro", level: 1 })).toBeTruthy();
     expect(screen.getAllByText("Rua A, 10").length).toBeGreaterThan(0);
+    expect(screen.getByText("Código 10000010")).toBeTruthy();
+    const codeOnDetails = screen.getByRole("textbox", { name: "Código" });
+    expect(codeOnDetails).toHaveProperty("value", "10000010");
+    expect(codeOnDetails).toHaveProperty("disabled", true);
     expect(screen.getByRole("button", { name: "Editar" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Editar lavanderia" })).toBeNull();
   });
@@ -127,13 +132,17 @@ describe("página Lavanderias", () => {
     await screen.findByText("Centro");
     await user.click(screen.getByRole("button", { name: "Nova lavanderia" }));
     expect(await screen.findByRole("heading", { name: "Nova lavanderia" })).toBeTruthy();
+    const generated = await screen.findByRole("textbox", { name: "Código" });
+    expect(generated).toHaveProperty("value", "84729100");
+    expect(generated).toHaveProperty("disabled", true);
+    expect(generated).toHaveProperty("readOnly", true);
     await user.type(screen.getByLabelText("Nome"), "Sul");
     await user.type(screen.getByLabelText("Endereço"), "Rua C, 3");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     expect(await screen.findByRole("heading", { name: "Sul", level: 1 })).toBeTruthy();
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     const post = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/api/stores") && c[1]?.method === "POST");
-    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ name: "Sul", address: "Rua C, 3" });
+    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ name: "Sul", address: "Rua C, 3", code: "84729100" });
   });
 
   it("mostra as máquinas da lavanderia nos detalhes", async () => {

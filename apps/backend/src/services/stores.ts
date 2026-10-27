@@ -47,9 +47,23 @@ export class StoreService {
     return mapStore(rows[0]);
   }
 
+  async uniqueCode(preferred?: string) {
+    if (preferred) {
+      const taken = (await this.db.query("SELECT 1 FROM stores WHERE code = $1", [preferred])).rows[0];
+      if (taken) throw new HttpError(409, "Já existe uma lavanderia com este código", "conflict");
+      return preferred;
+    }
+    for (let i = 0; i < 30; i++) {
+      const code = randomDigitCode(8);
+      const taken = (await this.db.query("SELECT 1 FROM stores WHERE code = $1", [code])).rows[0];
+      if (!taken) return code;
+    }
+    throw new HttpError(500, "Não foi possível gerar um código único", "code_exhausted");
+  }
+
   async create(input: StoreInput) {
     const id = randomUUID();
-    const code = input.code?.trim() || randomDigitCode(8);
+    const code = await this.uniqueCode(input.code?.trim() || undefined);
     await this.db.query("INSERT INTO stores (id, name, code, address, created_at) VALUES ($1,$2,$3,$4,$5)", [
       id,
       input.name,
