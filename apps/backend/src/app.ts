@@ -14,6 +14,10 @@ import { StoneDeeplinkProvider } from "./payments/stone-deeplink.js";
 import { BoardService } from "./services/boards.js";
 import { OrderService } from "./services/orders.js";
 import { ReleaseService, mapCommand } from "./services/releases.js";
+import { CustomerService } from "./services/customers.js";
+import { MachineService, mapMachine } from "./services/machines.js";
+import { SalesService } from "./services/sales.js";
+import { MACHINE_CODE, STORE_CODE, StoreService } from "./services/stores.js";
 
 export interface AppDeps {
   db: Db;
@@ -44,18 +48,7 @@ export interface LavHttp {
 const kind = z.enum(["WASHER", "DRYER"]);
 const channel = z.number().int().min(MIN_CHANNEL).max(MAX_CHANNEL);
 
-const mapStore = (r: any) => ({ id: r.id, name: r.name, code: r.code, active: r.active });
-const mapMachine = (r: any, online?: boolean) => ({
-  id: r.id,
-  storeId: r.store_id,
-  kind: r.kind,
-  label: r.label,
-  channel: r.channel,
-  deviceId: r.device_id,
-  priceOverrideCents: r.price_override_cents,
-  active: r.active,
-  ...(online === undefined ? {} : { online }),
-});
+const mapStore = (r: any) => ({ id: r.id, name: r.name, code: r.code, address: r.address ?? "", active: r.active });
 const mapPrice = (r: any) => ({ id: r.id, storeId: r.store_id, kind: r.kind, amountCents: r.amount_cents });
 
 function run(handler: (req: Request, res: Response) => Promise<void>) {
@@ -75,6 +68,10 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   const releases = new ReleaseService(db, gateway, config, now);
   const orders = new OrderService(db, gateway, releases, providers, config, now);
   const boards = new BoardService(db, gateway, releases, config, now);
+  const stores = new StoreService(db);
+  const customers = new CustomerService(db, now);
+  const sales = new SalesService(db);
+  const machines = new MachineService(db);
 
   gateway.onAck((deviceId, ack) => {
     void boards.touch(deviceId).catch(() => undefined);
@@ -101,34 +98,91 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     res.json({ ok: true });
   });
 
+  const storeBody = z.object({
+    name: z.string().trim().min(1).max(80).optional(),
+    code: z.string().regex(STORE_CODE).optional(),
+    address: z.string().max(240).optional(),
+    active: z.boolean().optional(),
+  });
   app.get("/stores", requireAdmin, run(async (_req, res) => {
-    const { rows } = await db.query("SELECT * FROM stores ORDER BY name");
-    res.json(rows.map(mapStore));
+    res.json(await stores.list());
   }));
   app.post("/stores", requireAdmin, run(async (req, res) => {
-    const b = z.object({ name: z.string().min(1), code: z.string().min(1) }).parse(req.body);
-    const id = randomUUID();
-    await db.query("INSERT INTO stores (id, name, code, created_at) VALUES ($1,$2,$3,$4)", [id, b.name, b.code, new Date()]);
-    const { rows } = await db.query("SELECT * FROM stores WHERE id = $1", [id]);
-    res.status(201).json(mapStore(rows[0]));
+    const b = storeBody.extend({ name: z.string().trim().min(1).max(80) }).parse(req.body);
+    res.status(201).json(await stores.create(b));
+  }));
+  app.get("/stores/:id", requireAdmin, run(async (req, res) => {
+    res.json(await stores.get(req.params.id));
   }));
   app.patch("/stores/:id", requireAdmin, run(async (req, res) => {
-    const { id } = req.params;
-    const b = z.object({ name: z.string().min(1).optional(), active: z.boolean().optional() }).parse(req.body);
-    const { rows } = await db.query(
-      "UPDATE stores SET name = COALESCE($2, name), active = COALESCE($3, active) WHERE id = $1 RETURNING *",
-      [id, b.name ?? null, b.active ?? null],
-    );
-    if (!rows[0]) throw new HttpError(404, "Loja não encontrada", "not_found");
-    res.json(mapStore(rows[0]));
+    res.json(await stores.update(req.params.id, storeBody.parse(req.body)));
   }));
+  app.delete("/stores/:id", requireAdmin, run(async (req, res) => {
+    await stores.remove(req.params.id);
+    res.status(204).send();
+  }));
+
+  app.get("/customers", requireAdmin, run(async (req, res) => {
+    const q = z.object({
+      name: z.string().optional(),
+      cpf: z.string().optional(),
+      page: z.coerce.number().int().min(0).default(0),
+      limit: z.coerce.number().int().min(1).max(100).default(10),
+    }).parse(req.query);
+    res.json(await customers.list(q));
+  }));
+  app.get("/customers/:id", requireAdmin, run(async (req, res) => {
+    res.json(await customers.get(req.params.id));
+  }));
+  app.patch("/customers/:id", requireAdmin, run(async (req, res) => {
+    const b = z.object({ blocked: z.boolean() }).parse(req.body);
+    res.json(await customers.setBlocked(req.params.id, b.blocked));
+  }));
+
+  app.get("/sales", requireAdmin, run(async (req, res) => {
+    const q = z.object({
+      storeId: z.string().optional(),
+      customerName: z.string().optional(),
+      customerId: z.string().optional(),
+      page: z.coerce.number().int().min(0).default(0),
+      limit: z.coerce.number().int().min(1).max(100).default(10),
+    }).parse(req.query);
+    res.json(await sales.list(q));
+  }));
+
+  async function busyDevices() {
+    const { rows } = await db.query("SELECT DISTINCT device_id FROM release_commands WHERE status IN ('PENDING','SENT')");
+    return new Set(rows.map((r) => r.device_id));
+  }
+  function normalizeDeviceId(value?: string | null) {
+    const t = (value ?? "").trim();
+    return t || null;
+  }
+  async function assertDeviceFree(deviceId: string, exceptId?: string) {
+    const { rows } = await db.query("SELECT id, label FROM machines WHERE device_id = $1", [deviceId]);
+    const taken = rows.find((r) => r.id !== exceptId);
+    if (taken) throw new HttpError(409, `Esta placa ESP32 já está na máquina "${taken.label}".`, "device_taken");
+  }
+  async function present(r: any, last: Map<string, string>, busy?: Set<string>) {
+    const busySet = busy ?? await busyDevices();
+    const online = gateway.isOnline(r.device_id);
+    const released = last.get(r.id) ?? last.get(r.device_id) ?? "";
+    return mapMachine(r, online, online && busySet.has(r.device_id), released);
+  }
 
   app.get("/machines", requireAdmin, run(async (req, res) => {
     const { storeId } = z.object({ storeId: z.string().optional() }).parse(req.query);
-    const { rows } = storeId
-      ? await db.query("SELECT * FROM machines WHERE store_id = $1 ORDER BY label", [storeId])
-      : await db.query("SELECT * FROM machines ORDER BY store_id, label");
-    res.json(rows.map((r) => mapMachine(r, gateway.isOnline(r.device_id))));
+    const { rows, last } = await machines.list(storeId);
+    const busy = await busyDevices();
+    res.json(await Promise.all(rows.map((r) => present(r, last, busy))));
+  }));
+  app.get("/machines/next-code", requireAdmin, run(async (_req, res) => {
+    res.json({ code: await machines.uniqueCode() });
+  }));
+  app.get("/machines/:id", requireAdmin, run(async (req, res) => {
+    const { row, lastReleasedAt } = await machines.get(req.params.id);
+    const last = new Map<string, string>([[row.id, lastReleasedAt]]);
+    res.json(await present(row, last));
   }));
   app.post("/machines", requireAdmin, run(async (req, res) => {
     const b = z
@@ -136,40 +190,52 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
         storeId: z.string(),
         kind,
         label: z.string().min(1),
+        code: z.string().regex(MACHINE_CODE).optional(),
         channel,
-        deviceId: z.string().min(1),
+        deviceId: z.string().optional(),
         priceOverrideCents: z.number().int().min(0).nullable().optional(),
       })
       .parse(req.body);
     const store = await db.query("SELECT id FROM stores WHERE id = $1", [b.storeId]);
     if (!store.rows[0]) throw new HttpError(404, "Loja não encontrada", "not_found");
+    const deviceId = normalizeDeviceId(b.deviceId);
+    if (deviceId) await assertDeviceFree(deviceId);
     const id = randomUUID();
+    const code = await machines.uniqueCode(b.code);
     await db.query(
-      "INSERT INTO machines (id, store_id, kind, label, channel, device_id, price_override_cents, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
-      [id, b.storeId, b.kind, b.label, b.channel, b.deviceId, b.priceOverrideCents ?? null, new Date()],
+      "INSERT INTO machines (id, store_id, kind, label, channel, device_id, price_override_cents, code, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+      [id, b.storeId, b.kind, b.label, b.channel, deviceId, b.priceOverrideCents ?? null, code, new Date()],
     );
-    const { rows } = await db.query("SELECT * FROM machines WHERE id = $1", [id]);
-    res.status(201).json(mapMachine(rows[0]));
+    const got = await machines.get(id);
+    res.status(201).json(await present(got.row, new Map([[id, got.lastReleasedAt]])));
   }));
   app.patch("/machines/:id", requireAdmin, run(async (req, res) => {
     const { id } = req.params;
     const b = z
       .object({
         label: z.string().min(1).optional(),
+        kind: kind.optional(),
         channel: channel.optional(),
-        deviceId: z.string().min(1).optional(),
+        deviceId: z.string().optional(),
         active: z.boolean().optional(),
+        blocked: z.boolean().optional(),
         priceOverrideCents: z.number().int().min(0).nullable().optional(),
       })
       .parse(req.body);
     const cur = (await db.query("SELECT * FROM machines WHERE id = $1", [id])).rows[0];
     if (!cur) throw new HttpError(404, "Máquina não encontrada", "not_found");
+    const deviceId = b.deviceId === undefined ? cur.device_id : normalizeDeviceId(b.deviceId);
+    if (deviceId) await assertDeviceFree(deviceId, id);
     const override = b.priceOverrideCents === undefined ? cur.price_override_cents : b.priceOverrideCents;
-    const { rows } = await db.query(
-      "UPDATE machines SET label=$2, channel=$3, device_id=$4, active=$5, price_override_cents=$6 WHERE id=$1 RETURNING *",
-      [id, b.label ?? cur.label, b.channel ?? cur.channel, b.deviceId ?? cur.device_id, b.active ?? cur.active, override],
+    const active = b.blocked !== undefined ? !b.blocked : (b.active ?? cur.active);
+    const becomingBlocked = active === false && cur.active === true;
+    const blockedAt = becomingBlocked ? new Date() : cur.blocked_at;
+    await db.query(
+      "UPDATE machines SET label=$2, kind=$3, channel=$4, device_id=$5, active=$6, price_override_cents=$7, blocked_at=$8 WHERE id=$1",
+      [id, b.label ?? cur.label, b.kind ?? cur.kind, b.channel ?? cur.channel, deviceId, active, override, blockedAt],
     );
-    res.json(mapMachine(rows[0]));
+    const got = await machines.get(id);
+    res.json(await present(got.row, new Map([[id, got.lastReleasedAt]])));
   }));
 
   app.get("/prices", requireAdmin, run(async (req, res) => {

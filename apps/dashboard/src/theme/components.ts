@@ -67,7 +67,6 @@ export const components: Components<Theme> = {
   MuiTabs: {
     styleOverrides: {
       indicator: { backgroundColor: GREY[800], height: 2 },
-      list: { gap: 40 },
     },
   },
   MuiTab: {
@@ -77,6 +76,7 @@ export const components: Components<Theme> = {
         minWidth: 0,
         minHeight: 48,
         padding: 0,
+        marginRight: 40,
         fontWeight: 600,
         color: GREY[600],
         "&.Mui-selected": { color: GREY[800] },

@@ -86,10 +86,10 @@ Simulador: `MQTT_URL`, `DEVICE_IDS`, `PULSE_MS`, `DROP_ACKS=true` (não confirma
 Com tudo no ar (loja demo):
 
 ```bash
-STORE=loja-demo; POS="Authorization: Bearer dev-pos-token"
+STORE=loja-maranguape-1; POS="Authorization: Bearer dev-pos-token"
 # 1. cria o pedido (Idempotency-Key evita pedido duplicado em reenvio)
 curl -s -X POST localhost:3000/orders -H "$POS" -H 'content-type: application/json' -H 'Idempotency-Key: teste-1' \
-  -d "{\"storeId\":\"$STORE\",\"machineIds\":[\"m1\",\"m3\"]}"
+  -d "{\"storeId\":\"$STORE\",\"machineIds\":[\"m-mar-1\",\"m-mar-3\"]}"
 # 2. registra o pagamento (use o id do pedido); o simulador imprime "PULSO canal 100/300"
 curl -s -X POST localhost:3000/orders/<ORDER_ID>/payments -H "$POS" -H 'content-type: application/json' \
   -d '{"provider":"simulated","payload":{"externalId":"pay-1","method":"PIX"}}'
@@ -135,7 +135,7 @@ do Deeplink da Stone; **campos ainda não validados no sandbox da Stone**). O ap
 
 ## API (resumo)
 
-Admin (`Authorization: Bearer $ADMIN_TOKEN`): `GET/POST/PATCH /stores`, `GET/POST/PATCH /machines`, `GET/PUT /prices`,
+Admin (`Authorization: Bearer $ADMIN_TOKEN`): `GET/POST/PATCH/DELETE /stores`, `GET/POST/PATCH /machines`, `GET/PUT /prices`,
 `GET /reports/sales?from&to&storeId`, `GET /orders`, `GET /commands`, `GET /commands/:id` (com log),
 `POST /commands/:id/retry`, `GET /devices`.
 POS (`POS_TOKEN`): `GET /pos/stores/:id/config`, `POST /orders`, `GET /orders/:id`, `POST /orders/:id/payments`.
@@ -156,8 +156,8 @@ Depois do login (token de admin), o painel usa um menu lateral:
 | Rota | Tela | Estado |
 | --- | --- | --- |
 | `/` | Início | placeholder (“Em breve.”) |
-| `/clientes` | Listagem de clientes | placeholder |
-| `/vendas` | Listagem de vendas | placeholder |
+| `/clientes` | Listagem de clientes | funcional |
+| `/vendas` | Listagem de vendas | funcional |
 | `/lavanderias` | Minhas Lavanderias | placeholder |
 | `/cupons` | Cupons | placeholder |
 | `/maquinas` | Máquinas | funcional |

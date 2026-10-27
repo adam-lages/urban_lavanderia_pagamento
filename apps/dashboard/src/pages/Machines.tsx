@@ -1,5 +1,7 @@
+import AddRounded from "@mui/icons-material/AddRounded";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -9,111 +11,100 @@ import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, type Board, type Command } from "../api";
-import { BoardForm } from "../components/BoardForm";
-import { ConfirmDialog } from "../components/ConfirmDialog";
+import { useNavigate } from "react-router-dom";
+import { api, type Machine } from "../api";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
-import { displayName, FINAL_STATES, type CommandDetail } from "./machines/format";
+import { useStores } from "../hooks";
 import { MachineRow } from "./machines/MachineRow";
 import { MachinesToolbar, type MachineFilter } from "./machines/MachinesToolbar";
 
-const HEAD = ["Máquina", "Tipo", "Loja", "Conexão", "Última vez visto", "Última liberação", ""];
-
-function matches(b: Board, filter: MachineFilter, search: string) {
-  if (filter === "online" && !b.online) return false;
-  if (filter === "offline" && b.online) return false;
-  const q = search.trim().toLowerCase();
-  if (!q) return true;
-  return [b.name, b.deviceId, b.storeName].some((v) => v?.toLowerCase().includes(q));
+function matches(m: Machine, filter: MachineFilter) {
+  if (filter === "online") return m.status === "ONLINE" || m.status === "IN_USE";
+  if (filter === "offline") return m.status === "OFFLINE";
+  if (filter === "blocked") return m.blocked;
+  return true;
 }
 
 export function Machines() {
-  const [boards, setBoards] = useState<Board[]>([]);
+  const navigate = useNavigate();
+  const { stores } = useStores();
+  const [storeId, setStoreId] = useState("");
+  const [items, setItems] = useState<Machine[]>([]);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState<Board | null>(null);
-  const [active, setActive] = useState<Record<string, CommandDetail>>({});
-  const [logOf, setLogOf] = useState<string | null>(null);
-  const [pending, setPending] = useState<Board | null>(null);
   const [filter, setFilter] = useState<MachineFilter>("all");
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const load = useCallback(() => {
-    api<Board[]>("/boards")
-      .then((r) => {
-        setBoards(r);
+    if (!storeId) {
+      setItems([]);
+      return;
+    }
+    api<Machine[]>(`/machines?storeId=${encodeURIComponent(storeId)}`)
+      .then((rows) => {
+        setItems(rows);
         setError("");
       })
       .catch((e) => setError(e.message));
-  }, []);
+  }, [storeId]);
+
   useEffect(() => {
     load();
+    if (!storeId) return;
     const t = setInterval(load, 3000);
     return () => clearInterval(t);
-  }, [load]);
+  }, [load, storeId]);
 
-  const track = useCallback(
-    (deviceId: string, commandId: string) => {
-      const poll = async () => {
-        const d = await api<CommandDetail>(`/commands/${commandId}`);
-        setActive((a) => ({ ...a, [deviceId]: d }));
-        if (!FINAL_STATES.includes(d.status)) setTimeout(() => void poll().catch(() => undefined), 1000);
-        else load();
-      };
-      void poll().catch((e) => setError(e.message));
-    },
-    [load],
-  );
-
-  const release = async (b: Board) => {
-    try {
-      const cmd = await api<Command>(`/boards/${b.deviceId}/release`, { method: "POST" });
-      setError("");
-      track(b.deviceId, cmd.id);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
-
-  const counts = useMemo(() => {
-    const online = boards.filter((b) => b.online).length;
-    return { all: boards.length, online, offline: boards.length - online };
-  }, [boards]);
-  const filtered = useMemo(() => boards.filter((b) => matches(b, filter, search)), [boards, filter, search]);
+  const counts = useMemo(() => ({
+    all: items.length,
+    online: items.filter((m) => m.status === "ONLINE" || m.status === "IN_USE").length,
+    offline: items.filter((m) => m.status === "OFFLINE").length,
+    blocked: items.filter((m) => m.blocked).length,
+  }), [items]);
+  const filtered = useMemo(() => items.filter((m) => matches(m, filter)), [items, filter]);
   const visible = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <>
-      <PageHeader title="Máquinas" description="Lavadoras e secadoras detectadas. A lista atualiza a cada 3 segundos." />
+      <PageHeader
+        title="Máquinas"
+        description="Lavadoras e secadoras cadastradas em cada lavanderia."
+        action={
+          <Button
+            variant="contained"
+            color="inherit"
+            startIcon={<AddRounded />}
+            onClick={() => navigate(storeId ? `/maquinas/nova?storeId=${storeId}` : "/maquinas/nova")}
+          >
+            Nova máquina
+          </Button>
+        }
+      />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Card>
         <MachinesToolbar
+          stores={stores}
+          storeId={storeId}
           filter={filter}
           counts={counts}
-          search={search}
+          onStore={(id) => { setStoreId(id); setFilter("all"); setPage(0); }}
           onFilter={(f) => { setFilter(f); setPage(0); }}
-          onSearch={(s) => { setSearch(s); setPage(0); }}
         />
         <TableContainer>
-          <Table sx={{ minWidth: 960 }}>
+          <Table sx={{ minWidth: 720 }}>
             <TableHead>
               <TableRow>
-                {HEAD.map((h, i) => <TableCell key={i}>{h}</TableCell>)}
+                <TableCell>Máquina</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Última liberação</TableCell>
+                <TableCell>Último bloqueio</TableCell>
+                <TableCell />
               </TableRow>
             </TableHead>
             <TableBody>
-              {visible.map((b) => (
-                <MachineRow
-                  key={b.deviceId}
-                  board={b}
-                  command={active[b.deviceId]}
-                  showLog={logOf === b.deviceId}
-                  onRelease={() => setPending(b)}
-                  onEdit={() => setEditing(b)}
-                  onToggleLog={() => setLogOf(logOf === b.deviceId ? null : b.deviceId)}
-                />
+              {visible.map((m) => (
+                <MachineRow key={m.id} machine={m} onDetails={() => navigate(`/maquinas/${m.id}`)} />
               ))}
             </TableBody>
           </Table>
@@ -121,8 +112,8 @@ export function Machines() {
         {!filtered.length && (
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
-              title={boards.length ? "Nenhuma máquina encontrada" : "Nenhuma placa detectada ainda"}
-              description={boards.length ? "Ajuste a busca ou o filtro." : "Ligue a ESP32 com o firmware gravado."}
+              title={!storeId ? "Selecione uma lavanderia" : "Nenhuma máquina encontrada"}
+              description={!storeId ? "Escolha a unidade no filtro para listar as máquinas cadastradas." : "Cadastre uma máquina nesta lavanderia."}
             />
           </Box>
         )}
@@ -138,26 +129,6 @@ export function Machines() {
           labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
         />
       </Card>
-      {editing && (
-        <BoardForm
-          board={editing}
-          onSaved={() => { setEditing(null); load(); }}
-          onCancel={() => setEditing(null)}
-        />
-      )}
-      {pending && (
-        <ConfirmDialog
-          title="Liberar máquina"
-          message={`Liberar a máquina "${displayName(pending)}" agora? A placa vai acionar a máquina uma vez.`}
-          confirmLabel="Liberar"
-          onCancel={() => setPending(null)}
-          onConfirm={() => {
-            const b = pending;
-            setPending(null);
-            void release(b);
-          }}
-        />
-      )}
     </>
   );
 }

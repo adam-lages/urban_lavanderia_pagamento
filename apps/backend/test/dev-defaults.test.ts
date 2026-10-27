@@ -22,8 +22,8 @@ describe("dev embutido", () => {
     await migrate(db);
     expect(await seedIfEmpty(db)).toBe(true);
     expect(await seedIfEmpty(db)).toBe(false);
-    const stores = await db.query("SELECT code FROM stores");
-    expect(stores.rows.map((r) => r.code)).toEqual(["DEMO"]);
+    const stores = await db.query("SELECT name FROM stores ORDER BY name");
+    expect(stores.rows.map((r) => r.name)).toEqual(["Algarve", "Maranguape 1", "Parque Recife"]);
     await db.end();
   });
 

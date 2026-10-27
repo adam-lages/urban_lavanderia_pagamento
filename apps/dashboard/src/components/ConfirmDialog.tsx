@@ -4,12 +4,15 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import type { ReactNode } from "react";
 
 interface Props {
   title: string;
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  confirmIcon?: ReactNode;
+  cancelIcon?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,6 +22,8 @@ export function ConfirmDialog({
   message,
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
+  confirmIcon,
+  cancelIcon,
   onConfirm,
   onCancel,
 }: Props) {
@@ -29,10 +34,10 @@ export function ConfirmDialog({
         <DialogContentText>{message}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button variant="outlined" color="inherit" onClick={onCancel}>
+        <Button variant="outlined" color="inherit" startIcon={cancelIcon} onClick={onCancel}>
           {cancelLabel}
         </Button>
-        <Button variant="contained" onClick={onConfirm}>
+        <Button variant="contained" startIcon={confirmIcon} onClick={onConfirm}>
           {confirmLabel}
         </Button>
       </DialogActions>

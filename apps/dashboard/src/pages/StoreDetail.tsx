@@ -1,0 +1,96 @@
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
+import EditOutlined from "@mui/icons-material/EditOutlined";
+import InfoOutlined from "@mui/icons-material/InfoOutlined";
+import LocalLaundryServiceOutlined from "@mui/icons-material/LocalLaundryServiceOutlined";
+import PaymentsOutlined from "@mui/icons-material/PaymentsOutlined";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
+import { alpha } from "@mui/material/styles";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { api, type Store } from "../api";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { PageHeader } from "../components/PageHeader";
+import { StoreData } from "./stores/StoreData";
+import { StoreMachines } from "./stores/StoreMachines";
+import { StorePrices } from "./stores/StorePrices";
+
+type StoreTab = "dados" | "maquinas" | "precos";
+
+export function StoreDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [store, setStore] = useState<Store | null>(null);
+  const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [tab, setTab] = useState<StoreTab>("dados");
+
+  useEffect(() => {
+    if (!id) return;
+    api<Store>(`/stores/${id}`)
+      .then((s) => {
+        setStore(s);
+        setError("");
+      })
+      .catch((e) => setError(e.message));
+  }, [id]);
+
+  const remove = async () => {
+    setConfirmDelete(false);
+    try {
+      await api(`/stores/${id}`, { method: "DELETE" });
+      navigate("/lavanderias");
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  return (
+    <>
+      <PageHeader
+        title={store?.name ?? "Lavanderia"}
+        crumbs={[
+          { label: "Minhas Lavanderias", to: "/lavanderias" },
+          { label: store?.name ?? "Detalhes" },
+        ]}
+        action={
+          store && (
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" color="inherit" startIcon={<EditOutlined />} onClick={() => navigate(`/lavanderias/${id}/editar`)}>
+                Editar
+              </Button>
+              <Button color="error" startIcon={<DeleteOutlineRounded />} onClick={() => setConfirmDelete(true)}>
+                Excluir
+              </Button>
+            </Stack>
+          )
+        }
+      />
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      <Tabs
+        value={tab}
+        onChange={(_, v: StoreTab) => setTab(v)}
+        sx={(t) => ({ mb: 3, boxShadow: `inset 0 -2px 0 0 ${alpha(t.palette.grey[500], 0.08)}` })}
+      >
+        <Tab value="dados" icon={<InfoOutlined fontSize="small" />} iconPosition="start" label="Dados" sx={{ gap: 1 }} />
+        <Tab value="maquinas" icon={<LocalLaundryServiceOutlined fontSize="small" />} iconPosition="start" label="Máquinas" sx={{ gap: 1 }} />
+        <Tab value="precos" icon={<PaymentsOutlined fontSize="small" />} iconPosition="start" label="Preços" sx={{ gap: 1 }} />
+      </Tabs>
+      {store && tab === "dados" && <StoreData store={store} />}
+      {id && store && tab === "maquinas" && <StoreMachines storeId={id} />}
+      {tab === "precos" && <StorePrices />}
+      {confirmDelete && store && (
+        <ConfirmDialog
+          title="Excluir lavanderia"
+          message={`Excluir "${store.name}"? Lojas com vendas não podem ser apagadas.`}
+          confirmLabel="Excluir"
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => void remove()}
+        />
+      )}
+    </>
+  );
+}

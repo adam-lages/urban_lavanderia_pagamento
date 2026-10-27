@@ -1,12 +1,19 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NAV_ITEMS } from "./nav";
 import { renderApp } from "./test/render";
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn(() =>
+    Promise.resolve({ ok: true, status: 200, json: async () => [] }),
+  ));
+});
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  vi.unstubAllGlobals();
 });
 
 describe("navegação do dashboard", () => {
@@ -33,7 +40,6 @@ describe("navegação do dashboard", () => {
     renderApp("/", { token: "dev-admin-token" });
     await user.click(screen.getByRole("link", { name: "Listagem de clientes" }));
     expect(screen.getByRole("heading", { name: "Listagem de clientes" })).toBeTruthy();
-    expect(screen.getByText("Em breve.")).toBeTruthy();
     await user.click(screen.getByRole("link", { name: "Listagem de vendas" }));
     expect(screen.getByRole("heading", { name: "Listagem de vendas" })).toBeTruthy();
     await user.click(screen.getByRole("link", { name: "Minhas Lavanderias" }));

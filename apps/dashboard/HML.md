@@ -26,11 +26,11 @@ Hoje o painel é um site React (biblioteca de telas) montado com Vite (ferrament
 | Rota | Tela | Hoje |
 | --- | --- | --- |
 | `/` | Início | só um aviso “Em breve.” |
-| `/clientes` | Listagem de clientes | ainda não existe (placeholder) |
-| `/vendas` | Listagem de vendas | ainda não existe (placeholder) |
-| `/lavanderias` | Minhas Lavanderias | ainda não existe (placeholder) |
+| `/clientes` | Listagem de clientes | **funciona** (lista, filtro por nome/CPF, exportar, detalhes) |
+| `/vendas` | Listagem de vendas | **funciona** (filtro por loja e cliente, paginação) |
+| `/lavanderias` | Minhas Lavanderias | **funciona** (lista, busca, cadastra, edita, exclui) |
 | `/cupons` | Cupons | ainda não existe (placeholder) |
-| `/maquinas` | Máquinas | **funciona** (lista, cadastra, edita, libera) |
+| `/maquinas` | Máquinas | **funciona** (filtro por lavanderia, status ESP32, cadastro e detalhes) |
 | `/login` | Entrar | pede o token de administrador |
 
 O painel **não guarda** as máquinas sozinho. Ele pergunta para o backend (`apps/backend`) e mostra a resposta.
@@ -140,7 +140,7 @@ Cadastro de máquina (tela **Máquinas**, depois que a placa aparece online): no
 ## Passos futuros (planejados)
 
 - Login de verdade (usuário, senha, perfis), no lugar do token único
-- Telas de clientes, vendas, lavanderias e cupons (hoje só o título)
+- Telas de clientes, vendas e cupons (hoje só o título)
 - Relatório de vendas no painel (a API `GET /reports/sales` já existe; a tela ainda não)
 - HTTPS (cadeado no navegador) quando o site for público
 - Ligar o fluxo do app da maquininha P2 (ainda não há app; veja `pos-p2/HML.md`)

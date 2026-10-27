@@ -63,7 +63,7 @@ export async function waitFor(fn: () => boolean | Promise<boolean>, timeoutMs = 
 export type Stack = Awaited<ReturnType<typeof startStack>>;
 
 export async function seed(s: Stack) {
-  const store = (await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "Loja 1", code: "L1" } })).json();
+  const store = (await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "Loja 1", code: "10000099" } })).json();
   await s.app.inject({ method: "PUT", url: "/prices", headers: ADMIN, payload: { storeId: store.id, kind: "WASHER", amountCents: 1800 } });
   await s.app.inject({ method: "PUT", url: "/prices", headers: ADMIN, payload: { storeId: store.id, kind: "DRYER", amountCents: 1200 } });
   const mk = async (kind: string, label: string, channel: number, deviceId: string) =>

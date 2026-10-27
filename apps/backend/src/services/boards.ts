@@ -99,6 +99,8 @@ export class BoardService {
   async release(deviceId: string) {
     const dev = (await this.db.query("SELECT device_id FROM devices WHERE device_id = $1", [deviceId])).rows[0];
     if (!dev) throw new HttpError(404, "Placa não encontrada", "not_found");
+    const locked = await this.db.query("SELECT 1 FROM machines WHERE device_id = $1 AND active = false LIMIT 1", [deviceId]);
+    if (locked.rows[0]) throw new HttpError(409, "Máquina bloqueada", "machine_blocked");
     if (!this.gateway.isOnline(deviceId)) throw new HttpError(409, "Placa offline", "device_offline");
     const id = randomUUID();
     const issued = this.now();

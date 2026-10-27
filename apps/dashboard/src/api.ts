@@ -1,6 +1,56 @@
 export type Kind = "WASHER" | "DRYER";
-export interface Store { id: string; name: string; code: string; active: boolean }
-export interface Machine { id: string; storeId: string; kind: Kind; label: string; channel: number; deviceId: string; priceOverrideCents: number | null; active: boolean; online?: boolean }
+export interface Store { id: string; name: string; code: string; address: string; active: boolean }
+export interface Customer {
+  id: string;
+  name: string;
+  birthDate: string;
+  age: number;
+  cpf: string;
+  email: string;
+  phone: string;
+  blocked: boolean;
+  createdAt: string;
+}
+export interface CustomerPage { items: Customer[]; total: number }
+export type PayMethod = "CREDIT" | "DEBIT" | "PIX" | "VOUCHER";
+export interface Sale {
+  id: string;
+  orderId: string;
+  storeId: string;
+  storeName: string;
+  customerName: string;
+  customerCpf: string;
+  machineLabel: string;
+  paidAt: string;
+  amountCents: number;
+  paymentMethod: PayMethod | null;
+  couponCode: string;
+  voucherCode: string;
+  authCode: string;
+  cardBrand: string;
+  cardNumber: string;
+}
+export interface SalePage { items: Sale[]; total: number }
+export type MachineStatus = "ONLINE" | "OFFLINE" | "IN_USE";
+export interface Machine {
+  id: string;
+  storeId: string;
+  storeName?: string;
+  kind: Kind;
+  label: string;
+  code: string;
+  channel: number;
+  deviceId: string;
+  priceOverrideCents: number | null;
+  active: boolean;
+  blocked: boolean;
+  online?: boolean;
+  status?: MachineStatus;
+  ip?: string;
+  lastSeenAt?: string;
+  lastReleasedAt?: string;
+  lastBlockedAt?: string;
+}
 export interface Price { id: string; storeId: string; kind: Kind; amountCents: number }
 export interface Command { id: string; orderId: string; storeId: string; machineId: string; deviceId: string; channel: number; status: string; attempts: number; issuedAt: string; sentAt: string | null; doneAt: string | null; machineLabel?: string; storeName?: string }
 export interface SalesReport {
@@ -27,6 +77,9 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 
 export const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 export const kindLabel = (k: Kind) => (k === "WASHER" ? "Lava" : "Seca");
+export const machineKindLabel = (k: Kind) => (k === "WASHER" ? "Lavadora" : "Secadora");
+export const machineStatusLabel = (s: MachineStatus | undefined) =>
+  s === "IN_USE" ? "EM USO" : s === "ONLINE" ? "ONLINE" : "OFFLINE";
 
 export interface BoardInfo { fw?: string; ip?: string; rssi?: number; uptimeS?: number; driver?: string; freeHeap?: number }
 export interface Board {

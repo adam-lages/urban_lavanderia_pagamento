@@ -139,7 +139,7 @@ Arquivos mais comuns:
 - `src/payments/` — como o pagamento é interpretado (`simulated` e `stone_deeplink`)
 - `src/migrations/` — SQL das tabelas
 
-Opcional: `DEMO_BOARD_ID=esp-<mac da placa>` (ID do monitor serial) cadastra a placa de teste como “Lavadora 1” no seed. Seed atual (quando o banco está vazio): loja `loja-demo` (código `DEMO`), preços R$ 18,00 lava / R$ 12,00 seca, máquinas `m1`…`m4` ligadas às placas `esp-m1`…`esp-m4`, canais 100, 200, 300, 400.
+Opcional: `DEMO_BOARD_ID=esp-<mac da placa>` (ID do monitor serial) cadastra a placa de teste como “Lavadora 1” no seed (Maranguape 1). Seed atual (quando o banco está vazio): Maranguape 1 (`10000001`), Parque Recife (`10000002`) e Algarve (`10000003`).
 
 ## O que dá para configurar HOJE
 

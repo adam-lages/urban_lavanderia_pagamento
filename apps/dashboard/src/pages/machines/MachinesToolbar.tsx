@@ -1,29 +1,31 @@
-import SearchRounded from "@mui/icons-material/SearchRounded";
 import Box from "@mui/material/Box";
-import InputAdornment from "@mui/material/InputAdornment";
+import MenuItem from "@mui/material/MenuItem";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import { alpha } from "@mui/material/styles";
+import type { Store } from "../../api";
 import { Label, type LabelColor } from "../../components/Label";
 
-export type MachineFilter = "all" | "online" | "offline";
+export type MachineFilter = "all" | "online" | "offline" | "blocked";
 
 const TABS: Array<{ value: MachineFilter; label: string; color: LabelColor }> = [
   { value: "all", label: "Todas", color: "default" },
-  { value: "online", label: "Disponíveis", color: "success" },
-  { value: "offline", label: "Sem conexão", color: "error" },
+  { value: "online", label: "Online", color: "success" },
+  { value: "offline", label: "Offline", color: "error" },
+  { value: "blocked", label: "Bloqueadas", color: "warning" },
 ];
 
 interface Props {
+  stores: Store[];
+  storeId: string;
   filter: MachineFilter;
   counts: Record<MachineFilter, number>;
-  search: string;
+  onStore: (id: string) => void;
   onFilter: (f: MachineFilter) => void;
-  onSearch: (s: string) => void;
 }
 
-export function MachinesToolbar({ filter, counts, search, onFilter, onSearch }: Props) {
+export function MachinesToolbar({ stores, storeId, filter, counts, onStore, onFilter }: Props) {
   return (
     <>
       <Tabs
@@ -37,20 +39,19 @@ export function MachinesToolbar({ filter, counts, search, onFilter, onSearch }: 
       </Tabs>
       <Box sx={{ p: 2.5 }}>
         <TextField
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-          placeholder="Buscar por nome, placa ou loja…"
-          slotProps={{
-            htmlInput: { "aria-label": "Buscar máquina" },
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRounded sx={{ color: "text.disabled" }} />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+          select
+          fullWidth={false}
+          value={storeId}
+          onChange={(e) => onStore(e.target.value)}
+          label="Lavanderia"
+          sx={{ width: { xs: 1, sm: 320 } }}
+          slotProps={{ htmlInput: { "aria-label": "Filtrar por lavanderia" } }}
+        >
+          <MenuItem value="">Selecione a lavanderia</MenuItem>
+          {stores.map((s) => (
+            <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+          ))}
+        </TextField>
       </Box>
     </>
   );
