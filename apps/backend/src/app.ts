@@ -16,6 +16,7 @@ import { OrderService } from "./services/orders.js";
 import { ReleaseService, mapCommand } from "./services/releases.js";
 import { CustomerService } from "./services/customers.js";
 import { MachineService, mapMachine } from "./services/machines.js";
+import { OverviewService } from "./services/overview.js";
 import { SalesService } from "./services/sales.js";
 import { MACHINE_CODE, STORE_CODE, StoreService } from "./services/stores.js";
 
@@ -71,6 +72,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   const stores = new StoreService(db);
   const customers = new CustomerService(db, now);
   const sales = new SalesService(db);
+  const overview = new OverviewService(db, now);
   const machines = new MachineService(db);
 
   gateway.onAck((deviceId, ack) => {
@@ -142,6 +144,11 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   app.patch("/customers/:id", requireAdmin, run(async (req, res) => {
     const b = z.object({ blocked: z.boolean() }).parse(req.body);
     res.json(await customers.setBlocked(req.params.id, b.blocked));
+  }));
+
+  app.get("/dashboard/overview", requireAdmin, run(async (req, res) => {
+    const q = z.object({ storeId: z.string().optional(), from: z.string(), to: z.string() }).parse(req.query);
+    res.json(await overview.get(q));
   }));
 
   app.get("/sales", requireAdmin, run(async (req, res) => {

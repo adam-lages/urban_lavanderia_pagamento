@@ -41,7 +41,7 @@ export function MachineCard({
 }) {
   const washer = m.kind === "WASHER";
   const Icon = washer ? LocalLaundryServiceOutlined : DryCleaningOutlined;
-  const tone = washer ? "info" : "warning";
+  const tone = washer ? "secondary" : "warning";
   return (
     <Card sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 2, height: 1 }}>
       <Avatar sx={(t) => ({ width: 48, height: 48, bgcolor: alpha(t.palette[tone].main, 0.16), color: `${tone}.dark` })}>

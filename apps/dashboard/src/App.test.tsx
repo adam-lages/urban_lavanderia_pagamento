@@ -2,11 +2,16 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NAV_ITEMS } from "./nav";
+import { emptyOverview } from "./test/overview";
 import { renderApp } from "./test/render";
 
 beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn(() =>
-    Promise.resolve({ ok: true, status: 200, json: async () => [] }),
+  vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => (String(input).includes("/dashboard/overview") ? emptyOverview : []),
+    }),
   ));
 });
 
@@ -32,7 +37,7 @@ describe("navegação do dashboard", () => {
     const nav = screen.getByRole("navigation", { name: "Menu principal" });
     for (const item of NAV_ITEMS) expect(nav.textContent).toContain(item.label);
     expect(screen.getByRole("heading", { name: "Início" })).toBeTruthy();
-    expect(screen.getByText("Em breve.")).toBeTruthy();
+    expect(await screen.findByText("Quantidade de ciclos")).toBeTruthy();
   });
 
   it("abre as páginas placeholder pelo menu", async () => {

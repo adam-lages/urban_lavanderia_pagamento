@@ -1,10 +1,14 @@
 import type { Queryable } from "./db.js";
+import { mulberry32, randomCustomers } from "./demo-random.js";
+import { BASE_PRICE_CENTS, seedSalesIfEmpty } from "./demo-sales.js";
 
-const STORES: Array<{ id: string; name: string; code: string; address: string }> = [
-  { id: "loja-maranguape-1", name: "Maranguape 1", code: "10000001", address: "Av. Dr. Cláudio José Gueiros Leite, 100 — Maranguape" },
-  { id: "loja-parque-recife", name: "Parque Recife", code: "10000002", address: "Av. Recife, 200 — Parque Recife" },
-  { id: "loja-algarve", name: "Algarve", code: "10000003", address: "Rua do Algarve, 50 — Imbiribeira" },
+const STORES: Array<{ id: string; name: string; code: string; address: string; prefix: string; slug: string; washers: number; dryers: number }> = [
+  { id: "loja-maranguape-1", name: "Maranguape 1", code: "10000001", address: "Av. Dr. Cláudio José Gueiros Leite, 100 — Maranguape", prefix: "1", slug: "mar", washers: 3, dryers: 3 },
+  { id: "loja-parque-recife", name: "Parque Recife", code: "10000002", address: "Av. Recife, 200 — Parque Recife", prefix: "2", slug: "par", washers: 2, dryers: 2 },
+  { id: "loja-algarve", name: "Algarve", code: "10000003", address: "Rua do Algarve, 50 — Imbiribeira", prefix: "3", slug: "alg", washers: 2, dryers: 2 },
 ];
+
+const RANDOM_CUSTOMERS_PER_STORE = 50;
 
 const CUSTOMERS: Array<{
   id: string; name: string; birthDate: string; cpf: string; email: string; phone: string; blocked?: boolean; createdAt: string;
@@ -19,38 +23,51 @@ const CUSTOMERS: Array<{
   { id: "cli-hugo", name: "Hugo Pereira", birthDate: "1990-08-28", cpf: "22233344405", email: "hugo.pereira@email.com", phone: "5581981110008", blocked: true, createdAt: "2026-06-02T13:00:00.000Z" },
 ];
 
-const MACHINES: Array<{ id: string; storeId: string; kind: "WASHER" | "DRYER"; label: string; code: string; channel: number; deviceId: string }> = [
-  { id: "m-mar-1", storeId: "loja-maranguape-1", kind: "WASHER", label: "Lavadora 1", code: "100001", channel: 100, deviceId: "esp-mar-1" },
-  { id: "m-mar-2", storeId: "loja-maranguape-1", kind: "WASHER", label: "Lavadora 2", code: "100002", channel: 200, deviceId: "esp-mar-2" },
-  { id: "m-mar-3", storeId: "loja-maranguape-1", kind: "DRYER", label: "Secadora 1", code: "100003", channel: 300, deviceId: "esp-mar-3" },
-  { id: "m-par-1", storeId: "loja-parque-recife", kind: "WASHER", label: "Lavadora 1", code: "200001", channel: 100, deviceId: "esp-par-1" },
-  { id: "m-par-2", storeId: "loja-parque-recife", kind: "DRYER", label: "Secadora 1", code: "200002", channel: 200, deviceId: "esp-par-2" },
-  { id: "m-par-3", storeId: "loja-parque-recife", kind: "DRYER", label: "Secadora 2", code: "200003", channel: 300, deviceId: "esp-par-3" },
-  { id: "m-alg-1", storeId: "loja-algarve", kind: "WASHER", label: "Lavadora 1", code: "300001", channel: 100, deviceId: "esp-alg-1" },
-  { id: "m-alg-2", storeId: "loja-algarve", kind: "DRYER", label: "Secadora 1", code: "300002", channel: 200, deviceId: "esp-alg-2" },
-];
+async function insertCustomer(
+  db: Queryable,
+  c: { id: string; name: string; birthDate: string; cpf: string; email: string; phone: string; blocked?: boolean; createdAt: string },
+) {
+  await db.query(
+    "INSERT INTO customers (id, name, birth_date, cpf, email, phone, blocked, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+    [c.id, c.name, c.birthDate, c.cpf, c.email, c.phone, Boolean(c.blocked), c.createdAt],
+  );
+}
 
-export async function seedIfEmpty(db: Queryable, boardId: string | undefined = process.env.DEMO_BOARD_ID?.trim()): Promise<boolean> {
+async function insertMachines(db: Queryable) {
+  for (const s of STORES) {
+    const layout = [
+      ...Array.from({ length: s.washers }, (_, i) => ({ kind: "WASHER" as const, label: `Lavadora ${i + 1}` })),
+      ...Array.from({ length: s.dryers }, (_, i) => ({ kind: "DRYER" as const, label: `Secadora ${i + 1}` })),
+    ];
+    for (const [i, m] of layout.entries()) {
+      await db.query(
+        "INSERT INTO machines (id, store_id, kind, label, channel, device_id, code, created_at) VALUES ($1,$2,$3,$4,100,$5,$6,now())",
+        [`m-${s.slug}-${i + 1}`, s.id, m.kind, m.label, `esp-${s.slug}-${i + 1}`, `${s.prefix}${String(i + 1).padStart(5, "0")}`],
+      );
+    }
+  }
+}
+
+export async function seedIfEmpty(
+  db: Queryable,
+  boardId: string | undefined = process.env.DEMO_BOARD_ID?.trim(),
+  now: Date = new Date(),
+): Promise<boolean> {
   const existing = await db.query("SELECT 1 FROM stores LIMIT 1");
   if (existing.rows.length) {
     await seedCustomersIfEmpty(db);
-    await seedSalesIfEmpty(db);
+    await seedSalesIfEmpty(db, now);
     console.log("Banco já possui lojas; seed de lojas ignorado.");
     return false;
   }
   for (const s of STORES) {
     await db.query("INSERT INTO stores (id, name, code, address, created_at) VALUES ($1,$2,$3,$4,now())", [s.id, s.name, s.code, s.address]);
     await db.query(
-      "INSERT INTO prices (id, store_id, kind, amount_cents, updated_at) VALUES ($1,$2,'WASHER',1800,now()),($3,$2,'DRYER',1200,now())",
-      [`p-w-${s.id}`, s.id, `p-d-${s.id}`],
+      "INSERT INTO prices (id, store_id, kind, amount_cents, updated_at) VALUES ($1,$2,'WASHER',$4,now()),($3,$2,'DRYER',$4,now())",
+      [`p-w-${s.id}`, s.id, `p-d-${s.id}`, BASE_PRICE_CENTS],
     );
   }
-  for (const m of MACHINES) {
-    await db.query(
-      "INSERT INTO machines (id, store_id, kind, label, channel, device_id, code, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,now())",
-      [m.id, m.storeId, m.kind, m.label, m.channel, m.deviceId, m.code],
-    );
-  }
+  await insertMachines(db);
   if (boardId) {
     await db.query(
       "INSERT INTO devices (device_id, name, store_id, kind, first_seen_at) VALUES ($1,'Lavadora 1',$2,'WASHER',now()) ON CONFLICT (device_id) DO NOTHING",
@@ -59,62 +76,21 @@ export async function seedIfEmpty(db: Queryable, boardId: string | undefined = p
     console.log(`Placa ${boardId} cadastrada como "Lavadora 1" (Maranguape 1).`);
   }
   await seedCustomersIfEmpty(db);
-  await seedSalesIfEmpty(db);
-  console.log("Seed criado: Maranguape 1, Parque Recife e Algarve.");
+  await seedRandomCustomers(db, now);
+  await seedSalesIfEmpty(db, now);
+  console.log("Seed criado: Maranguape 1, Parque Recife e Algarve, com clientes e vendas de demonstração.");
   return true;
 }
 
 export async function seedCustomersIfEmpty(db: Queryable): Promise<void> {
   const existing = await db.query("SELECT 1 FROM customers LIMIT 1");
   if (existing.rows.length) return;
-  for (const c of CUSTOMERS) {
-    await db.query(
-      "INSERT INTO customers (id, name, birth_date, cpf, email, phone, blocked, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
-      [c.id, c.name, c.birthDate, c.cpf, c.email, c.phone, Boolean(c.blocked), c.createdAt],
-    );
-  }
+  for (const c of CUSTOMERS) await insertCustomer(db, c);
 }
 
-const SALES: Array<{
-  id: string;
-  storeId: string;
-  customerId: string;
-  machineId: string;
-  amount: number;
-  method: string;
-  paidAt: string;
-  coupon?: string;
-  voucher?: string;
-  auth?: string;
-  brand?: string;
-  card?: string;
-}> = [
-  { id: "sale-1", storeId: "loja-maranguape-1", customerId: "cli-ana", machineId: "m-mar-1", amount: 1800, method: "PIX", paidAt: "2026-09-02T13:10:00.000Z" },
-  { id: "sale-2", storeId: "loja-maranguape-1", customerId: "cli-bruno", machineId: "m-mar-2", amount: 1800, method: "CREDIT", paidAt: "2026-09-05T16:40:00.000Z", coupon: "LAVA10", auth: "A1B2C3", brand: "Mastercard", card: "**** 4412" },
-  { id: "sale-3", storeId: "loja-maranguape-1", customerId: "cli-ana", machineId: "m-mar-3", amount: 1200, method: "DEBIT", paidAt: "2026-09-12T11:05:00.000Z", auth: "D4E5F6", brand: "Visa", card: "**** 8890" },
-  { id: "sale-4", storeId: "loja-parque-recife", customerId: "cli-diego", machineId: "m-par-1", amount: 1800, method: "CREDIT", paidAt: "2026-09-18T18:22:00.000Z", auth: "G7H8I9", brand: "Elo", card: "**** 1023" },
-  { id: "sale-5", storeId: "loja-parque-recife", customerId: "cli-elisa", machineId: "m-par-2", amount: 1200, method: "PIX", paidAt: "2026-09-21T09:48:00.000Z", coupon: "SECA5" },
-  { id: "sale-6", storeId: "loja-parque-recife", customerId: "cli-gabi", machineId: "m-par-3", amount: 1200, method: "VOUCHER", paidAt: "2026-10-01T14:15:00.000Z", voucher: "URB-200" },
-  { id: "sale-7", storeId: "loja-algarve", customerId: "cli-fabio", machineId: "m-alg-1", amount: 1800, method: "DEBIT", paidAt: "2026-10-08T10:30:00.000Z", auth: "J1K2L3", brand: "Visa", card: "**** 5566" },
-  { id: "sale-8", storeId: "loja-algarve", customerId: "cli-hugo", machineId: "m-alg-2", amount: 1200, method: "PIX", paidAt: "2026-10-15T19:00:00.000Z" },
-];
-
-export async function seedSalesIfEmpty(db: Queryable): Promise<void> {
-  const existing = await db.query("SELECT 1 FROM orders LIMIT 1");
-  if (existing.rows.length) return;
-  for (const s of SALES) {
-    await db.query(
-      "INSERT INTO orders (id, store_id, status, total_cents, customer_id, coupon_code, voucher_code, created_at, paid_at) VALUES ($1,$2,'PAID',$3,$4,$5,$6,$7,$7)",
-      [s.id, s.storeId, s.amount, s.customerId, s.coupon ?? null, s.voucher ?? null, s.paidAt],
-    );
-    const machine = MACHINES.find((m) => m.id === s.machineId);
-    await db.query(
-      "INSERT INTO order_items (id, order_id, machine_id, kind, price_cents) VALUES ($1,$2,$3,$4,$5)",
-      [`item-${s.id}`, s.id, s.machineId, machine?.kind, s.amount],
-    );
-    await db.query(
-      "INSERT INTO payments (id, order_id, provider, external_id, status, method, amount_cents, auth_code, card_brand, card_number, created_at) VALUES ($1,$2,'stone',$3,'APPROVED',$4,$5,$6,$7,$8,$9)",
-      [`pay-${s.id}`, s.id, `ext-${s.id}`, s.method, s.amount, s.auth ?? null, s.brand ?? null, s.card ?? null, s.paidAt],
-    );
-  }
+async function seedRandomCustomers(db: Queryable, now: Date) {
+  const used = new Set((await db.query("SELECT cpf FROM customers")).rows.map((r) => r.cpf as string));
+  const from = new Date(Date.UTC(now.getUTCFullYear(), 4, 1, 12));
+  const list = randomCustomers(mulberry32(20260502), RANDOM_CUSTOMERS_PER_STORE * STORES.length, used, from, now);
+  for (const c of list) await insertCustomer(db, c);
 }

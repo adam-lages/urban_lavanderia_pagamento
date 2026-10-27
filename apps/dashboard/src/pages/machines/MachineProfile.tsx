@@ -27,7 +27,7 @@ export function MachineProfile({
   onToggleBlock: (blocked: boolean) => void;
 }) {
   const Icon = m.kind === "DRYER" ? DryCleaningOutlined : LocalLaundryServiceOutlined;
-  const tone = m.kind === "DRYER" ? "warning" : "info";
+  const tone = m.kind === "DRYER" ? "warning" : "secondary";
   const statusColor = m.status === "ONLINE" ? "success" : m.status === "IN_USE" ? "warning" : "error";
   const blocked = m.blocked;
   return (

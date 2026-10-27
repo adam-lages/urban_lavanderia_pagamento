@@ -60,6 +60,25 @@ export interface SalesReport {
   byKind: Record<Kind, { count: number; revenueCents: number }>;
 }
 
+export interface Overview {
+  period: { from: string; to: string };
+  cycles: number;
+  revenueCents: number;
+  avgTicketCents: number;
+  machines: Array<{ machineId: string; label: string; storeName: string; kind: Kind; cycles: number; revenueCents: number }>;
+  byDay: Array<{ date: string; cycles: number; revenueCents: number }>;
+  byWeek: Array<{ weekStart: string; cycles: number; revenueCents: number }>;
+  byHour: Array<{ hour: number; cycles: number; revenueCents: number }>;
+  kinds: { washers: number; dryers: number };
+  recurrence: {
+    customers: number;
+    returning: number;
+    anonymousOrders: number;
+    buckets: Array<{ label: string; customers: number }>;
+  };
+  signups: { month: string; total: number; byDay: Array<{ date: string; count: number; cumulative: number }> };
+}
+
 const TOKEN_KEY = "lav_admin_token";
 export const getToken = () => localStorage.getItem(TOKEN_KEY) ?? "";
 export const setToken = (t: string) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY));

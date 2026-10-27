@@ -1,5 +1,5 @@
 import { alpha, type Components, type Theme } from "@mui/material/styles";
-import { GREY, SHADOWS } from "./palette";
+import { GREY, SHADOWS, palette } from "./palette";
 
 export const DRAWER_WIDTH = 280;
 export const HEADER_HEIGHT = 72;
@@ -14,8 +14,8 @@ export const components: Components<Theme> = {
         ...(ownerState.variant === "contained" &&
           ownerState.color === "inherit" && {
             color: "#fff",
-            backgroundColor: GREY[800],
-            "&:hover": { backgroundColor: GREY[700] },
+            backgroundColor: palette.primary.main,
+            "&:hover": { backgroundColor: palette.primary.dark },
           }),
         ...(ownerState.variant === "outlined" && { borderColor: alpha(GREY[500], 0.32) }),
       }),
@@ -28,7 +28,7 @@ export const components: Components<Theme> = {
   MuiTextField: { defaultProps: { fullWidth: true } },
   MuiInputLabel: {
     styleOverrides: {
-      root: { color: GREY[600], "&.Mui-focused": { color: GREY[800], fontWeight: 600 } },
+      root: { color: GREY[600], "&.Mui-focused": { color: palette.primary.main, fontWeight: 600 } },
     },
   },
   MuiOutlinedInput: {
@@ -37,7 +37,7 @@ export const components: Components<Theme> = {
         borderRadius: 8,
         "& .MuiOutlinedInput-notchedOutline": { borderColor: alpha(GREY[500], 0.2) },
         "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: GREY[800] },
-        "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: GREY[800], borderWidth: 2 },
+        "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: palette.primary.main, borderWidth: 2 },
       },
     },
   },
@@ -66,7 +66,7 @@ export const components: Components<Theme> = {
   },
   MuiTabs: {
     styleOverrides: {
-      indicator: { backgroundColor: GREY[800], height: 2 },
+      indicator: { backgroundColor: palette.primary.main, height: 2 },
     },
   },
   MuiTab: {
@@ -79,7 +79,7 @@ export const components: Components<Theme> = {
         marginRight: 40,
         fontWeight: 600,
         color: GREY[600],
-        "&.Mui-selected": { color: GREY[800] },
+        "&.Mui-selected": { color: palette.primary.main },
       },
     },
   },
@@ -105,10 +105,10 @@ export const components: Components<Theme> = {
         padding: "4px 8px 4px 12px",
         color: GREY[600],
         "&.active": {
-          color: "#00A76F",
+          color: palette.primary.main,
           fontWeight: 600,
-          backgroundColor: alpha("#00A76F", 0.08),
-          "&:hover": { backgroundColor: alpha("#00A76F", 0.16) },
+          backgroundColor: alpha(palette.primary.main, 0.08),
+          "&:hover": { backgroundColor: alpha(palette.primary.main, 0.16) },
         },
       },
     },

@@ -4,6 +4,7 @@ import { useAuth } from "./auth";
 import { AppLayout } from "./layout/AppLayout";
 import { ClientDetail } from "./pages/ClientDetail";
 import { Clients } from "./pages/Clients";
+import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { MachineDetail } from "./pages/MachineDetail";
 import { MachineForm } from "./pages/MachineForm";
@@ -32,7 +33,7 @@ export function App() {
           </RequireAuth>
         }
       >
-        <Route path="/" element={<Placeholder title="Início" />} />
+        <Route path="/" element={<Home />} />
         <Route path="/clientes" element={<Clients />} />
         <Route path="/clientes/:id" element={<ClientDetail />} />
         <Route path="/vendas" element={<Sales />} />
