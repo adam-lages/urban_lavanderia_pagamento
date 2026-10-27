@@ -167,8 +167,8 @@ export function MachineForm() {
                   label="Código"
                   value={code}
                   disabled
-                  helperText="Gerado automaticamente e único."
-                  slotProps={{ htmlInput: { "aria-label": "Código" } }}
+                  helperText="Gerado na criação. Não pode ser alterado."
+                  slotProps={{ htmlInput: { "aria-label": "Código", readOnly: true } }}
                 />
                 <TextField
                   select

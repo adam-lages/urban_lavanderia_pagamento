@@ -48,6 +48,19 @@ describe("máquinas", () => {
     expect(existing.some((m: { code: string }) => m.code === next.json().code)).toBe(false);
   });
 
+  it("recusa alterar o código depois de criada", async () => {
+    const { washer } = await seed(s);
+    const denied = await s.app.inject({
+      method: "PATCH",
+      url: `/machines/${washer.id}`,
+      headers: ADMIN,
+      payload: { code: "999999" },
+    });
+    expect(denied.statusCode).toBe(400);
+    const one = (await s.app.inject({ method: "GET", url: `/machines/${washer.id}`, headers: ADMIN })).json();
+    expect(one.code).not.toBe("999999");
+  });
+
   it("cadastra máquina sem placa ESP32", async () => {
     const { store } = await seed(s);
     const created = await s.app.inject({

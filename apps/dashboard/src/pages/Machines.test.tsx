@@ -44,6 +44,7 @@ const dryer: Machine = {
 
 let machines: Machine[];
 let created: Machine | null;
+let washerState: Machine;
 
 function json(data: unknown, status = 200) {
   return Promise.resolve({
@@ -56,9 +57,15 @@ function json(data: unknown, status = 200) {
 beforeEach(() => {
   machines = [washer, dryer];
   created = null;
+  washerState = { ...washer };
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const parsed = new URL(String(input), "http://local.test");
     const method = init?.method ?? "GET";
+    if (parsed.pathname === "/api/machines/m-mar-1" && method === "PATCH") {
+      const body = JSON.parse(String(init?.body));
+      washerState = { ...washerState, blocked: body.blocked, active: !body.blocked };
+      return json(washerState);
+    }
     if (parsed.pathname === "/api/machines/next-code") return json({ code: "847291" });
     if (parsed.pathname === "/api/stores") return json([maranguape]);
     if (parsed.pathname === "/api/boards") {
@@ -81,7 +88,8 @@ beforeEach(() => {
       const storeId = parsed.searchParams.get("storeId") ?? "";
       return json(storeId ? machines.filter((m) => m.storeId === storeId) : machines);
     }
-    if (parsed.pathname === "/api/machines/m-mar-1") return json(washer);
+    if (parsed.pathname === "/api/machines/m-mar-1") return json(washerState);
+    if (parsed.pathname === "/api/machines/m-mar-3") return json(dryer);
     if (parsed.pathname === "/api/machines/m-new" && created) return json(created);
     if (parsed.pathname === "/api/machines" && method === "POST") {
       const body = JSON.parse(String(init?.body));
@@ -128,6 +136,24 @@ describe("página Máquinas", () => {
     expect(screen.getByDisplayValue("10.1.2.8")).toBeTruthy();
     expect(screen.getByDisplayValue("esp-mar-1")).toBeTruthy();
     expect(screen.getByLabelText("Placa ESP32")).toBeTruthy();
+    const lock = screen.getByRole("switch", { name: "Bloquear máquina" });
+    expect(lock).toHaveProperty("checked", false);
+    await user.click(lock);
+    expect(await screen.findByText("BLOQUEADA")).toBeTruthy();
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/machines/m-mar-1") && c[1]?.method === "PATCH")).toBe(true);
+  });
+
+  it("abre detalhes de máquina bloqueada com o switch ligado", async () => {
+    const user = userEvent.setup();
+    renderApp("/maquinas", { token: "dev-admin-token" });
+    await user.click(await screen.findByLabelText("Filtrar por lavanderia"));
+    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
+    await screen.findByText("Secadora 1");
+    await user.click(screen.getByRole("button", { name: "Detalhes de Secadora 1" }));
+    expect(await screen.findByRole("heading", { name: "Secadora 1", level: 1 })).toBeTruthy();
+    expect(screen.getByRole("switch", { name: "Bloquear máquina" })).toHaveProperty("checked", true);
+    expect(screen.getByText("BLOQUEADA")).toBeTruthy();
   });
 
   it("cadastra uma máquina nova", async () => {
@@ -149,5 +175,13 @@ describe("página Máquinas", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Lavadora 9", level: 1 })).toBeTruthy());
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/machines") && c[1]?.method === "POST")).toBe(true);
+  });
+
+  it("não deixa alterar o código na edição", async () => {
+    renderApp("/maquinas/m-mar-1/editar", { token: "dev-admin-token" });
+    const code = await screen.findByRole("textbox", { name: "Código" });
+    expect(code).toHaveProperty("value", "100001");
+    expect(code).toHaveProperty("disabled", true);
+    expect(code).toHaveProperty("readOnly", true);
   });
 });

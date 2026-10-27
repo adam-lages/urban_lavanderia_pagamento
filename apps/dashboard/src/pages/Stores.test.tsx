@@ -176,6 +176,10 @@ describe("página Minhas Lavanderias", () => {
     await user.click(screen.getByRole("button", { name: "Editar" }));
     expect(await screen.findByRole("heading", { name: "Editar lavanderia" })).toBeTruthy();
     expect(await screen.findByDisplayValue("Centro")).toBeTruthy();
+    const code = screen.getByRole("textbox", { name: "Código" });
+    expect(code).toHaveProperty("value", "10000010");
+    expect(code).toHaveProperty("disabled", true);
+    expect(code).toHaveProperty("readOnly", true);
   });
 
   it("não libera máquina bloqueada ou offline", async () => {

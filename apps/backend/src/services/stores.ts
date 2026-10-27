@@ -64,11 +64,10 @@ export class StoreService {
     const { rows } = await this.db.query(
       `UPDATE stores SET
          name = COALESCE($2, name),
-         code = COALESCE($3, code),
-         address = COALESCE($4, address),
-         active = COALESCE($5, active)
+         address = COALESCE($3, address),
+         active = COALESCE($4, active)
        WHERE id = $1 RETURNING *`,
-      [id, input.name ?? null, input.code ?? null, input.address ?? null, input.active ?? null],
+      [id, input.name ?? null, input.address ?? null, input.active ?? null],
     );
     if (!rows[0]) throw new HttpError(404, "Lavanderia não encontrada", "not_found");
     return mapStore(rows[0]);

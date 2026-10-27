@@ -115,7 +115,11 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     res.json(await stores.get(req.params.id));
   }));
   app.patch("/stores/:id", requireAdmin, run(async (req, res) => {
-    res.json(await stores.update(req.params.id, storeBody.parse(req.body)));
+    if (Object.prototype.hasOwnProperty.call(req.body, "code")) {
+      throw new HttpError(400, "O código da lavanderia não pode ser alterado", "code_immutable");
+    }
+    const { code: _code, ...patch } = storeBody.parse(req.body);
+    res.json(await stores.update(req.params.id, patch));
   }));
   app.delete("/stores/:id", requireAdmin, run(async (req, res) => {
     await stores.remove(req.params.id);
@@ -222,6 +226,9 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
         priceOverrideCents: z.number().int().min(0).nullable().optional(),
       })
       .parse(req.body);
+    if (Object.prototype.hasOwnProperty.call(req.body, "code")) {
+      throw new HttpError(400, "O código da máquina não pode ser alterado", "code_immutable");
+    }
     const cur = (await db.query("SELECT * FROM machines WHERE id = $1", [id])).rows[0];
     if (!cur) throw new HttpError(404, "Máquina não encontrada", "not_found");
     const deviceId = b.deviceId === undefined ? cur.device_id : normalizeDeviceId(b.deviceId);

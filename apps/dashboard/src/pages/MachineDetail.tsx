@@ -26,6 +26,17 @@ export function MachineDetail() {
     return () => clearInterval(t);
   }, [load]);
 
+  const toggleBlock = async (blocked: boolean) => {
+    if (!id) return;
+    try {
+      const next = await api<Machine>(`/machines/${id}`, { method: "PATCH", body: { blocked } });
+      setMachine(next);
+      setError("");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -40,7 +51,7 @@ export function MachineDetail() {
         }
       />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-      {machine && <MachineProfile machine={machine} />}
+      {machine && <MachineProfile machine={machine} onToggleBlock={(v) => void toggleBlock(v)} />}
     </>
   );
 }

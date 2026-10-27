@@ -35,6 +35,17 @@ describe("lavanderias", () => {
     expect(patched.statusCode).toBe(200);
     expect(patched.json().name).toBe("Centro Sul");
     expect(patched.json().address).toBe("Rua B, 20");
+    expect(patched.json().code).toBe(store.code);
+
+    const keepCode = await s.app.inject({
+      method: "PATCH",
+      url: `/stores/${store.id}`,
+      headers: ADMIN,
+      payload: { code: "88888888" },
+    });
+    expect(keepCode.statusCode).toBe(400);
+    const still = (await s.app.inject({ method: "GET", url: `/stores/${store.id}`, headers: ADMIN })).json();
+    expect(still.code).toBe(store.code);
 
     const one = (await s.app.inject({ method: "GET", url: `/stores/${store.id}`, headers: ADMIN })).json();
     expect(one.address).toBe("Rua B, 20");

@@ -40,12 +40,14 @@ export function StoreForm() {
     setSaving(true);
     try {
       const digits = code.replace(/\D/g, "");
-      const body = { name: name.trim(), address: address.trim(), code: digits || undefined };
       if (isNew) {
-        const created = await api<Store>("/stores", { method: "POST", body });
+        const created = await api<Store>("/stores", {
+          method: "POST",
+          body: { name: name.trim(), address: address.trim(), code: digits || undefined },
+        });
         navigate(`/lavanderias/${created.id}`);
       } else {
-        await api(`/stores/${id}`, { method: "PATCH", body });
+        await api(`/stores/${id}`, { method: "PATCH", body: { name: name.trim(), address: address.trim() } });
         navigate(`/lavanderias/${id}`);
       }
     } catch (err) {
@@ -87,9 +89,13 @@ export function StoreForm() {
               <TextField
                 label="Código"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                helperText="Numérico, 8 dígitos. Se vazio no cadastro, o sistema gera um."
-                slotProps={{ htmlInput: { "aria-label": "Código", inputMode: "numeric" } }}
+                onChange={(e) => {
+                  if (!isNew) return;
+                  setCode(e.target.value.replace(/\D/g, "").slice(0, 8));
+                }}
+                disabled={!isNew}
+                helperText={isNew ? "Numérico, 8 dígitos. Se vazio, o sistema gera um." : "Gerado na criação. Não pode ser alterado."}
+                slotProps={{ htmlInput: { "aria-label": "Código", inputMode: "numeric", readOnly: !isNew } }}
               />
               <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
                 <Button variant="outlined" color="inherit" onClick={() => navigate(cancelTo)}>
