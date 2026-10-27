@@ -4,12 +4,10 @@ import { App } from "../App";
 import { AuthProvider } from "../auth";
 import { setToken } from "../api";
 
-const future = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
-
 export function renderApp(path = "/", { token = "" }: { token?: string } = {}) {
   setToken(token);
   return render(
-    <MemoryRouter initialEntries={[path]} future={future}>
+    <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
         <App />
       </AuthProvider>
