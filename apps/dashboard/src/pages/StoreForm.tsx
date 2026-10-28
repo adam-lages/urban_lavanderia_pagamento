@@ -8,24 +8,20 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ROLES, ROLE_LABEL, type Role, type Store } from "../api";
+import { useAuth } from "../auth";
 import { PageHeader } from "../components/PageHeader";
 import { cnpjDigits, formatCnpj } from "./stores/format";
+import { STORE_FIELDS_GRID, StoreSection } from "./stores/StoreFieldsLayout";
 import { isLoginValid, StoreLoginFields } from "./stores/StoreLoginFields";
-
-const GRID = { display: "grid", gap: 3, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } } as const;
-
-function Section({ title }: { title: string }) {
-  return <Typography variant="subtitle2" sx={{ gridColumn: "1 / -1" }}>{title}</Typography>;
-}
 
 export function StoreForm() {
   const { id } = useParams();
   const isNew = !id;
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [address, setAddress] = useState("");
@@ -36,16 +32,20 @@ export function StoreForm() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [hasLogin, setHasLogin] = useState(false);
+  const [franchiseEmail, setFranchiseEmail] = useState(user?.email ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const ready = !!name.trim() && !!legalName.trim() && cnpjDigits(cnpj).length === 14 && (!isNew || !!code) && isLoginValid(loginEmail, loginPassword, hasLogin) && (!isNew || !!loginEmail.trim());
+  const sharedLogin = role === "FRANQUIA";
+  const loginOk = sharedLogin || (isLoginValid(loginEmail, loginPassword, hasLogin) && (!isNew || !!loginEmail.trim()));
+  const ready = !!name.trim() && !!legalName.trim() && cnpjDigits(cnpj).length === 14 && (!isNew || !!code) && loginOk;
 
   useEffect(() => {
     if (isNew) {
-      api<{ code: string }>("/stores/next-code")
+      api<{ code: string; franchiseEmail?: string }>("/stores/next-code")
         .then((r) => {
           setCode(r.code);
+          if (r.franchiseEmail) setFranchiseEmail(r.franchiseEmail);
           setLoaded(true);
           setError("");
         })
@@ -82,8 +82,8 @@ export function StoreForm() {
         address: address.trim(),
         cnpj: cnpjDigits(cnpj),
         role: isNew ? role : undefined,
-        loginEmail: loginEmail.trim() || undefined,
-        loginPassword: loginPassword || undefined,
+        loginEmail: sharedLogin ? undefined : (loginEmail.trim() || undefined),
+        loginPassword: sharedLogin ? undefined : (loginPassword || undefined),
       };
       if (isNew) {
         const created = await api<Store>("/stores", { method: "POST", body: { ...body, code } });
@@ -112,8 +112,8 @@ export function StoreForm() {
       {loaded && (
         <Card>
           <CardContent>
-            <Box component="form" onSubmit={(e) => void onSubmit(e)} sx={GRID}>
-              <Section title="Dados da empresa" />
+            <Box component="form" onSubmit={(e) => void onSubmit(e)} sx={STORE_FIELDS_GRID}>
+              <StoreSection title="Dados da empresa" />
               <TextField
                 label="Razão social"
                 value={legalName}
@@ -141,7 +141,17 @@ export function StoreForm() {
                   select
                   label="Permissão"
                   value={role}
-                  onChange={(e) => setRole(e.target.value as Role)}
+                  onChange={(e) => {
+                    const next = e.target.value as Role;
+                    setRole(next);
+                    if (next === "FRANQUIA") {
+                      setLoginEmail(franchiseEmail);
+                      setLoginPassword("");
+                    } else {
+                      setLoginEmail("");
+                      setLoginPassword("");
+                    }
+                  }}
                   required
                   disabled={!isNew || !customRole}
                   fullWidth
@@ -160,7 +170,11 @@ export function StoreForm() {
                         checked={customRole}
                         onChange={(_, v) => {
                           setCustomRole(v);
-                          if (!v) setRole("FRANQUEADO");
+                          if (!v) {
+                            setRole("FRANQUEADO");
+                            setLoginEmail("");
+                            setLoginPassword("");
+                          }
                         }}
                         slotProps={{ input: { "aria-label": "Alterar permissão" } }}
                       />
@@ -182,11 +196,12 @@ export function StoreForm() {
                 onChange={(e) => setAddress(e.target.value)}
                 slotProps={{ htmlInput: { "aria-label": "Endereço" } }}
               />
-              <Section title="Acesso ao sistema" />
+              <StoreSection title="Acesso ao sistema" />
               <StoreLoginFields
                 email={loginEmail}
                 password={loginPassword}
                 hasLogin={hasLogin}
+                locked={sharedLogin}
                 onEmail={setLoginEmail}
                 onPassword={setLoginPassword}
               />

@@ -46,6 +46,13 @@ export interface StoreLogin {
   password?: string;
 }
 
+export async function franchiseEmail(db: Queryable): Promise<string> {
+  const { rows } = await db.query(
+    "SELECT email FROM users WHERE role = 'FRANQUIA' ORDER BY created_at LIMIT 1",
+  );
+  return rows[0]?.email ?? SEED_FRANQUIA_EMAIL;
+}
+
 export async function assertStoreLoginValid(db: Queryable, login: StoreLogin, storeId?: string): Promise<void> {
   const email = login.email?.trim().toLowerCase();
   const cur = storeId ? (await db.query("SELECT id FROM users WHERE store_id = $1", [storeId])).rows[0] : undefined;

@@ -20,13 +20,14 @@ interface Props {
   email: string;
   password: string;
   hasLogin: boolean;
+  locked?: boolean;
   onEmail: (v: string) => void;
   onPassword: (v: string) => void;
 }
 
-export function StoreLoginFields({ email, password, hasLogin, onEmail, onPassword }: Props) {
+export function StoreLoginFields({ email, password, hasLogin, locked = false, onEmail, onPassword }: Props) {
   const [show, setShow] = useState(false);
-  const shortPassword = !!password && password.length < MIN_PASSWORD_LENGTH;
+  const shortPassword = !locked && !!password && password.length < MIN_PASSWORD_LENGTH;
   return (
     <>
       <TextField
@@ -34,31 +35,41 @@ export function StoreLoginFields({ email, password, hasLogin, onEmail, onPasswor
         type="email"
         value={email}
         onChange={(e) => onEmail(e.target.value)}
-        required={!hasLogin}
+        required={!locked && !hasLogin}
+        disabled={locked}
         autoComplete="off"
-        helperText="Será o login do franqueado no painel."
-        slotProps={{ htmlInput: { "aria-label": "E-mail de acesso" } }}
+        helperText={locked ? "E-mail compartilhado da franquia. Não pode ser alterado." : "Será o login do franqueado no painel."}
+        slotProps={{ htmlInput: { "aria-label": "E-mail de acesso", readOnly: locked } }}
       />
       <TextField
         label={hasLogin ? "Nova senha" : "Senha"}
         type={show ? "text" : "password"}
-        value={password}
+        value={locked ? "" : password}
         onChange={(e) => onPassword(e.target.value)}
-        required={!hasLogin}
+        required={!locked && !hasLogin}
+        disabled={locked}
         autoComplete="new-password"
         error={shortPassword}
-        helperText={hasLogin ? "Deixe em branco para manter a senha atual." : `Mínimo de ${MIN_PASSWORD_LENGTH} caracteres.`}
+        helperText={
+          locked
+            ? "A senha da franquia é a mesma para todas as lojas com essa permissão."
+            : hasLogin
+              ? "Deixe em branco para manter a senha atual."
+              : `Mínimo de ${MIN_PASSWORD_LENGTH} caracteres.`
+        }
         slotProps={{
           htmlInput: { "aria-label": "Senha de acesso" },
-          input: {
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton aria-label={show ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShow(!show)} edge="end">
-                  {show ? <VisibilityOffOutlined /> : <VisibilityOutlined />}
-                </IconButton>
-              </InputAdornment>
-            ),
-          },
+          input: locked
+            ? undefined
+            : {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton aria-label={show ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShow(!show)} edge="end">
+                      {show ? <VisibilityOffOutlined /> : <VisibilityOutlined />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
         }}
       />
     </>

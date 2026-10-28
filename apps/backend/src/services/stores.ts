@@ -3,7 +3,7 @@ import type { Role } from "../auth.js";
 import { cnpjDigits, isValidCnpj } from "../cnpj.js";
 import type { Db } from "../db.js";
 import { HttpError } from "../errors.js";
-import { assertStoreLoginValid, saveStoreLogin } from "./users.js";
+import { assertStoreLoginValid, franchiseEmail, saveStoreLogin } from "./users.js";
 
 export interface StoreRow {
   id: string;
@@ -69,15 +69,21 @@ const SELECT_STORE = "SELECT s.*, u.email AS login_email FROM stores s LEFT JOIN
 export class StoreService {
   constructor(private db: Db) {}
 
+  private async withLogin(row: any) {
+    const store = mapStore(row);
+    if (store.role === "FRANQUIA") store.loginEmail = await franchiseEmail(this.db);
+    return store;
+  }
+
   async list() {
     const { rows } = await this.db.query(`${SELECT_STORE} ORDER BY s.name`);
-    return rows.map(mapStore);
+    return Promise.all(rows.map((r) => this.withLogin(r)));
   }
 
   async get(id: string) {
     const { rows } = await this.db.query(`${SELECT_STORE} WHERE s.id = $1`, [id]);
     if (!rows[0]) throw new HttpError(404, "Lavanderia não encontrada", "not_found");
-    return mapStore(rows[0]);
+    return this.withLogin(rows[0]);
   }
 
   async uniqueCode(preferred?: string) {
@@ -105,13 +111,17 @@ export class StoreService {
     const code = await this.uniqueCode(input.code?.trim() || undefined);
     const cnpj = requireCnpj(input.cnpj);
     await this.assertCnpjFree(cnpj);
-    await assertStoreLoginValid(this.db, { email: input.loginEmail, password: input.loginPassword });
+    if (input.role === "FRANQUEADO") {
+      await assertStoreLoginValid(this.db, { email: input.loginEmail, password: input.loginPassword });
+    }
     await this.db.tx(async (q) => {
       await q.query(
         "INSERT INTO stores (id, name, legal_name, code, address, cnpj, role, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
         [id, input.name, input.legalName, code, input.address?.trim() ?? "", cnpj, input.role, new Date()],
       );
-      await saveStoreLogin(q, id, input.role, { email: input.loginEmail, password: input.loginPassword });
+      if (input.role === "FRANQUEADO") {
+        await saveStoreLogin(q, id, input.role, { email: input.loginEmail, password: input.loginPassword });
+      }
     });
     return this.get(id);
   }
@@ -123,7 +133,9 @@ export class StoreService {
     }
     const cnpj = input.cnpj !== undefined ? requireCnpj(input.cnpj) : cur.cnpj;
     if (cnpj !== cur.cnpj) await this.assertCnpjFree(cnpj, id);
-    await assertStoreLoginValid(this.db, { email: input.loginEmail, password: input.loginPassword }, id);
+    if (cur.role === "FRANQUEADO") {
+      await assertStoreLoginValid(this.db, { email: input.loginEmail, password: input.loginPassword }, id);
+    }
     await this.db.tx(async (q) => {
       const { rows } = await q.query(
         `UPDATE stores SET
@@ -137,7 +149,9 @@ export class StoreService {
         [id, input.name ?? null, input.address ?? null, cnpj, input.role ?? null, input.active ?? null, input.legalName ?? null],
       );
       if (!rows[0]) throw new HttpError(404, "Lavanderia não encontrada", "not_found");
-      await saveStoreLogin(q, id, rows[0].role, { email: input.loginEmail, password: input.loginPassword });
+      if (rows[0].role === "FRANQUEADO") {
+        await saveStoreLogin(q, id, rows[0].role, { email: input.loginEmail, password: input.loginPassword });
+      }
     });
     return this.get(id);
   }

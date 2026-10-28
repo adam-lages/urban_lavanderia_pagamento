@@ -21,7 +21,7 @@ import { OverviewService } from "./services/overview.js";
 import { PricingService } from "./services/pricing.js";
 import { SalesService } from "./services/sales.js";
 import { MACHINE_CODE, STORE_CODE, StoreService, mapStore } from "./services/stores.js";
-import { login as loginUser, MIN_PASSWORD_LENGTH } from "./services/users.js";
+import { franchiseEmail, login as loginUser, MIN_PASSWORD_LENGTH } from "./services/users.js";
 
 export interface AppDeps {
   db: Db;
@@ -139,7 +139,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     res.json(userOf(req)?.role === "FRANQUIA" ? list : list.map((st) => ({ ...st, loginEmail: "" })));
   }));
   app.get("/stores/next-code", requireFranquia, run(async (_req, res) => {
-    res.json({ code: await stores.uniqueCode() });
+    res.json({ code: await stores.uniqueCode(), franchiseEmail: await franchiseEmail(db) });
   }));
   app.post("/stores", requireFranquia, run(async (req, res) => {
     const b = storeBody.extend({

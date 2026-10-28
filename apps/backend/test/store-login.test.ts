@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { seedDefaultUsers, SEED_FRANQUIA_EMAIL, SEED_FRANQUIA_PASSWORD } from "../src/services/users.js";
 import { ADMIN, startStack, type Stack } from "./helpers.js";
 
 let s: Stack;
@@ -40,6 +41,23 @@ describe("acesso da lavanderia", () => {
     expect(dup.statusCode).toBe(409);
     const list = (await s.app.inject({ method: "GET", url: "/stores", headers: ADMIN })).json();
     expect(list).toHaveLength(1);
+  });
+
+  it("reusa o e-mail da franquia e não cria senha própria", async () => {
+    await seedDefaultUsers(s.db);
+    const store = (await create({ ...base, role: "FRANQUIA", cnpj: "33444555000181" })).json();
+    expect(store.role).toBe("FRANQUIA");
+    expect(store.loginEmail).toBe(SEED_FRANQUIA_EMAIL);
+    const other = (await create({ ...base, role: "FRANQUIA", name: "Sul", legalName: "Sul Ltda", cnpj: "55666777000181" })).json();
+    expect(other.loginEmail).toBe(SEED_FRANQUIA_EMAIL);
+    expect((await login(SEED_FRANQUIA_EMAIL, SEED_FRANQUIA_PASSWORD)).statusCode).toBe(200);
+    const patch = await s.app.inject({
+      method: "PATCH",
+      url: `/stores/${store.id}`,
+      headers: ADMIN,
+      payload: { loginEmail: "outro@email.com", loginPassword: "segredo123" },
+    });
+    expect(patch.json().loginEmail).toBe(SEED_FRANQUIA_EMAIL);
   });
 
   it("cadastra como franqueado quando a permissão não é enviada", async () => {

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Machine, Store } from "../api";
 import { renderApp } from "../test/render";
 
-const centro: Store = { id: "s1", name: "Centro", legalName: "Centro Lavanderia Ltda", loginEmail: "centro@email.com", code: "10000010", address: "Rua A, 10", cnpj: "11222333000181", role: "FRANQUIA", active: true };
+const centro: Store = { id: "s1", name: "Centro", legalName: "Centro Lavanderia Ltda", loginEmail: "adamflages@gmail.com", code: "10000010", address: "Rua A, 10", cnpj: "11222333000181", role: "FRANQUIA", active: true };
 const norte: Store = { id: "s2", name: "Norte", legalName: "Norte Lavanderia Ltda", code: "10000020", address: "Av. B, 200", cnpj: "33444555000181", role: "FRANQUEADO", active: true };
 
 const dryer: Machine = {
@@ -69,7 +69,7 @@ beforeEach(() => {
       return json({ id: "cmd-1", status: "PENDING", deviceId: "esp-1" }, 202);
     }
     if (url.endsWith("/api/stores") && method === "GET") return json(stores);
-    if (url.endsWith("/api/stores/next-code") && method === "GET") return json({ code: "84729100" });
+    if (url.endsWith("/api/stores/next-code") && method === "GET") return json({ code: "84729100", franchiseEmail: "adamflages@gmail.com" });
     if (url.endsWith("/api/stores") && method === "POST") {
       const body = JSON.parse(String(init?.body));
       const created = {
@@ -144,8 +144,8 @@ describe("página Lavanderias", () => {
     expect(screen.queryByText("Rua A, 10")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Detalhes de Centro" }));
     expect(await screen.findByRole("heading", { name: "Centro", level: 1 })).toBeTruthy();
-    expect(screen.getAllByText("Rua A, 10").length).toBeGreaterThan(0);
-    expect(screen.getByText("Código 10000010")).toBeTruthy();
+    expect(screen.getByDisplayValue("Rua A, 10")).toBeTruthy();
+    expect(screen.getByDisplayValue("adamflages@gmail.com")).toBeTruthy();
     const codeOnDetails = screen.getByRole("textbox", { name: "Código" });
     expect(codeOnDetails).toHaveProperty("value", "10000010");
     expect(codeOnDetails).toHaveProperty("disabled", true);
@@ -195,8 +195,13 @@ describe("página Lavanderias", () => {
     await user.click(screen.getByRole("checkbox", { name: "Alterar permissão" }));
     await user.click(screen.getByLabelText("Permissão"));
     await user.click(await screen.findByRole("option", { name: "Franquia" }));
+    expect(screen.getByLabelText("E-mail de acesso")).toHaveProperty("value", "adamflages@gmail.com");
+    expect(screen.getByLabelText("E-mail de acesso")).toHaveProperty("disabled", true);
+    expect(screen.getByLabelText("Senha de acesso")).toHaveProperty("disabled", true);
     await user.click(screen.getByLabelText("Permissão"));
     await user.click(await screen.findByRole("option", { name: "Franqueado" }));
+    expect(screen.getByLabelText("E-mail de acesso")).toHaveProperty("value", "");
+    expect(screen.getByLabelText("E-mail de acesso")).toHaveProperty("disabled", false);
     await user.type(screen.getByLabelText("Endereço"), "Rua C, 3");
     expect(screen.getByRole("button", { name: "Salvar" })).toHaveProperty("disabled", true);
     fireEvent.change(screen.getByLabelText("E-mail de acesso"), { target: { value: "sul@email.com" } });
@@ -224,6 +229,9 @@ describe("página Lavanderias", () => {
     renderApp("/lavanderias/s1", { token: "dev-admin-token" });
     await screen.findByRole("heading", { name: "Centro", level: 1 });
     expect(screen.getByRole("tab", { name: "Dados" })).toBeTruthy();
+    expect(screen.getByText("Dados da empresa")).toBeTruthy();
+    expect(screen.getByDisplayValue("adamflages@gmail.com")).toBeTruthy();
+    expect(screen.queryByLabelText("Senha de acesso")).toBeNull();
     await user.click(screen.getByRole("tab", { name: "Máquinas" }));
     expect(await screen.findByText("Lavadora 1")).toBeTruthy();
     expect(screen.getByText("Secadora 1")).toBeTruthy();
@@ -266,9 +274,9 @@ describe("página Lavanderias", () => {
   it("edita mantendo a senha quando o campo fica em branco", async () => {
     const user = userEvent.setup();
     renderApp("/lavanderias/s1/editar", { token: "dev-admin-token" });
-    expect(await screen.findByDisplayValue("centro@email.com")).toBeTruthy();
-    expect(screen.getByLabelText("Senha de acesso")).toHaveProperty("value", "");
-    expect(screen.getByText("Deixe em branco para manter a senha atual.")).toBeTruthy();
+    expect(await screen.findByDisplayValue("adamflages@gmail.com")).toBeTruthy();
+    expect(screen.getByLabelText("E-mail de acesso")).toHaveProperty("disabled", true);
+    expect(screen.getByLabelText("Senha de acesso")).toHaveProperty("disabled", true);
     expect(screen.getByLabelText("Permissão").getAttribute("aria-disabled")).toBe("true");
     expect(screen.queryByRole("checkbox", { name: "Alterar permissão" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Salvar" }));
@@ -276,7 +284,7 @@ describe("página Lavanderias", () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     const patch = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/api/stores/s1") && c[1]?.method === "PATCH");
     const body = JSON.parse(String(patch?.[1]?.body));
-    expect(body.loginEmail).toBe("centro@email.com");
+    expect(body).not.toHaveProperty("loginEmail");
     expect(body).not.toHaveProperty("loginPassword");
     expect(body).not.toHaveProperty("role");
   });
