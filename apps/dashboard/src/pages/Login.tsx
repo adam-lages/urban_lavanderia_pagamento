@@ -9,25 +9,37 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { loginRequest } from "../api";
 import { useAuth } from "../auth";
 import { Logo } from "../components/Logo";
 import { AuthHero } from "../layout/AuthHero";
 
 export function Login() {
   const { authed, login } = useAuth();
-  const [value, setValue] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
+  const ready = !!email.trim() && !!password && !busy;
 
   if (authed) return <Navigate to={from} replace />;
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    login(value.trim());
-    navigate(from, { replace: true });
+    if (!ready) return;
+    setBusy(true);
+    setError("");
+    try {
+      const session = await loginRequest(email.trim(), password);
+      login(session.token, session.user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível entrar");
+      setBusy(false);
+    }
   };
 
   return (
@@ -51,17 +63,28 @@ export function Login() {
               Acesse o painel de operação das lavanderias.
             </Typography>
           </Stack>
-          <Alert severity="info" sx={{ mb: 3 }}>
-            Use o <strong>token de administrador</strong> definido no servidor.
-          </Alert>
+          {error ? (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          ) : null}
           <Stack spacing={3}>
             <TextField
-              label="Token de administrador"
-              placeholder="Token de administrador"
-              type={visible ? "text" : "password"}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
+              label="E-mail"
+              placeholder="E-mail"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               autoFocus
+              autoComplete="username"
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              label="Senha"
+              placeholder="Senha"
+              type={visible ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               slotProps={{
                 inputLabel: { shrink: true },
@@ -70,7 +93,7 @@ export function Login() {
                     <InputAdornment position="end">
                       <IconButton
                         edge="end"
-                        aria-label={visible ? "Ocultar token" : "Mostrar token"}
+                        aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
                         onClick={() => setVisible((v) => !v)}
                       >
                         {visible ? <VisibilityOutlined /> : <VisibilityOffOutlined />}
@@ -80,7 +103,7 @@ export function Login() {
                 },
               }}
             />
-            <Button type="submit" variant="contained" color="inherit" size="large" fullWidth disabled={!value.trim()}>
+            <Button type="submit" variant="contained" color="inherit" size="large" fullWidth disabled={!ready}>
               Entrar
             </Button>
           </Stack>

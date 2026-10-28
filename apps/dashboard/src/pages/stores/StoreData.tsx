@@ -9,6 +9,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import type { Store } from "../../api";
+import { formatCnpj, roleLabel } from "./format";
 
 export function StoreData({ store }: { store: Store }) {
   return (
@@ -57,13 +58,16 @@ export function StoreData({ store }: { store: Store }) {
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
-            <TextField label="Nome" value={store.name} slotProps={{ input: { readOnly: true } }} />
+            <TextField label="Razão social" value={store.legalName || "—"} slotProps={{ input: { readOnly: true } }} />
+            <TextField label="Nome fantasia" value={store.name} slotProps={{ input: { readOnly: true } }} />
             <TextField
               label="Código"
               value={store.code}
               disabled
               slotProps={{ htmlInput: { "aria-label": "Código", readOnly: true } }}
             />
+            <TextField label="CNPJ" value={formatCnpj(store.cnpj) || "—"} slotProps={{ input: { readOnly: true } }} />
+            <TextField label="Tipo" value={roleLabel(store.role)} slotProps={{ input: { readOnly: true } }} />
             <TextField
               label="Endereço"
               value={store.address || "—"}

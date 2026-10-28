@@ -10,12 +10,12 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import { alpha } from "@mui/material/styles";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, type Store } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PageHeader } from "../components/PageHeader";
 import { StoreData } from "./stores/StoreData";
-import { StoreMachines } from "./stores/StoreMachines";
+import { StoreMachinesTable } from "./stores/StoreMachinesTable";
 import { StorePrices } from "./stores/StorePrices";
 
 type StoreTab = "dados" | "maquinas" | "precos";
@@ -26,7 +26,9 @@ export function StoreDetail() {
   const [store, setStore] = useState<Store | null>(null);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [tab, setTab] = useState<StoreTab>("dados");
+  const [params, setParams] = useSearchParams();
+  const tab = (params.get("tab") as StoreTab | null) ?? "dados";
+  const setTab = (t: StoreTab) => setParams({ tab: t }, { replace: true });
 
   useEffect(() => {
     if (!id) return;
@@ -80,7 +82,7 @@ export function StoreDetail() {
         <Tab value="precos" icon={<PaymentsOutlined fontSize="small" />} iconPosition="start" label="Preços" sx={{ gap: 1 }} />
       </Tabs>
       {store && tab === "dados" && <StoreData store={store} />}
-      {id && store && tab === "maquinas" && <StoreMachines storeId={id} />}
+      {id && store && tab === "maquinas" && <StoreMachinesTable storeId={id} />}
       {tab === "precos" && <StorePrices />}
       {confirmDelete && store && (
         <ConfirmDialog

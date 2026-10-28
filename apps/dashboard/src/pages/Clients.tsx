@@ -8,11 +8,12 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, type Customer, type CustomerPage } from "../api";
 import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
+import { countByRole, StoreRoleTabs, storesOfRole, type StoreFilter } from "../components/StoreRoleTabs";
 import { TableLoading } from "../components/TableLoading";
 import { useStores } from "../hooks";
 import { ClientRow } from "./clients/ClientRow";
@@ -24,6 +25,7 @@ const NO_FILTER = { storeId: "", name: "", cpf: "" };
 export function Clients() {
   const navigate = useNavigate();
   const { stores } = useStores();
+  const [role, setRole] = useState<StoreFilter>("FRANQUIA");
   const [storeId, setStoreId] = useState("");
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
@@ -32,10 +34,11 @@ export function Clients() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [items, setItems] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const filtered = Boolean(query.storeId || query.name || query.cpf);
+  const counts = useMemo(() => countByRole(stores), [stores]);
+  const roleStores = useMemo(() => storesOfRole(stores, role), [stores, role]);
 
   const search = () => {
     setQuery({ storeId, name, cpf });
@@ -50,7 +53,17 @@ export function Clients() {
     setPage(0);
   };
 
+  const changeRole = (r: StoreFilter) => {
+    setRole(r);
+    clearFilters();
+  };
+
   const load = useCallback(() => {
+    if (!query.storeId) {
+      setItems([]);
+      setTotal(0);
+      return;
+    }
     const params = new URLSearchParams({
       ...query,
       page: String(page),
@@ -84,8 +97,9 @@ export function Clients() {
       <PageHeader title="Clientes" />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Card>
+        <StoreRoleTabs value={role} counts={counts} onChange={changeRole} withAll={false} />
         <ClientsToolbar
-          stores={stores}
+          stores={roleStores}
           storeId={storeId}
           name={name}
           cpf={cpf}
@@ -94,14 +108,14 @@ export function Clients() {
           onCpf={setCpf}
           onSearch={search}
           onClear={clearFilters}
+          exportDisabled={!query.storeId}
           onExport={() => void exportSheet()}
         />
         <TableLoading loading={loading}>
         <TableContainer>
-          <Table sx={{ minWidth: 880 }}>
+          <Table sx={{ minWidth: 760 }}>
             <TableHead>
               <TableRow>
-                <TableCell>Unidade</TableCell>
                 <TableCell>Nome</TableCell>
                 <TableCell>CPF</TableCell>
                 <TableCell>Celular</TableCell>
@@ -121,8 +135,8 @@ export function Clients() {
         {!loading && !items.length && (
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
-              title={filtered ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-              description={filtered ? "Ajuste a lavanderia, o nome ou o CPF." : "Os clientes da operação vão aparecer aqui."}
+              title={query.storeId ? "Nenhum cliente encontrado" : "Selecione uma lavanderia"}
+              description={query.storeId ? "Ajuste a lavanderia, o nome ou o CPF." : "Escolha a unidade e clique em Pesquisar para listar os clientes."}
             />
           </Box>
         )}

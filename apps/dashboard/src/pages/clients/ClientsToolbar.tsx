@@ -17,10 +17,11 @@ interface Props {
   onCpf: (v: string) => void;
   onSearch: () => void;
   onClear: () => void;
+  exportDisabled: boolean;
   onExport: () => void;
 }
 
-export function ClientsToolbar({ stores, storeId, name, cpf, onStore, onName, onCpf, onSearch, onClear, onExport }: Props) {
+export function ClientsToolbar({ stores, storeId, name, cpf, onStore, onName, onCpf, onSearch, onClear, exportDisabled, onExport }: Props) {
   return (
     <Box
       component="form"
@@ -37,7 +38,7 @@ export function ClientsToolbar({ stores, storeId, name, cpf, onStore, onName, on
         sx={{ width: { xs: 1, sm: 240 } }}
         slotProps={{ htmlInput: { "aria-label": "Filtrar por lavanderia" } }}
       >
-        <MenuItem value="">Todas</MenuItem>
+        <MenuItem value="" disabled>Selecione a lavanderia</MenuItem>
         {stores.map((s) => (
           <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
         ))}
@@ -71,14 +72,14 @@ export function ClientsToolbar({ stores, storeId, name, cpf, onStore, onName, on
           htmlInput: { "aria-label": "Filtrar por CPF", inputMode: "numeric" },
         }}
       />
-      <Button type="submit" variant="contained" color="inherit">
+      <Button type="submit" variant="contained" color="inherit" disabled={!storeId}>
         Pesquisar
       </Button>
       <Button type="button" variant="outlined" color="inherit" onClick={onClear}>
         Limpar
       </Button>
       <Box sx={{ flexGrow: 1 }} />
-      <Button type="button" color="inherit" startIcon={<FileDownloadOutlined />} onClick={onExport}>
+      <Button type="button" color="inherit" startIcon={<FileDownloadOutlined />} disabled={exportDisabled} onClick={onExport}>
         Exportar
       </Button>
     </Box>

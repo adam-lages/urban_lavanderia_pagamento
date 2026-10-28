@@ -72,6 +72,38 @@ describe("máquinas", () => {
     expect(created.statusCode).toBe(201);
     expect(created.json().deviceId).toBe("");
     expect(created.json().status).toBe("OFFLINE");
+    expect(created.json().model).toBe("LG_FH069");
+    expect(created.json().cycleMinutes).toBe(30);
+  });
+
+  it("usa 45 minutos para secadora e permite alterar o tempo de ciclo", async () => {
+    const { store } = await seed(s);
+    const dryer = (await s.app.inject({
+      method: "POST",
+      url: "/machines",
+      headers: ADMIN,
+      payload: { storeId: store.id, kind: "DRYER", label: "Secadora 9", channel: 100 },
+    })).json();
+    expect(dryer.cycleMinutes).toBe(45);
+    const patched = await s.app.inject({ method: "PATCH", url: `/machines/${dryer.id}`, headers: ADMIN, payload: { cycleMinutes: 50 } });
+    expect(patched.json().cycleMinutes).toBe(50);
+    const invalid = await s.app.inject({ method: "PATCH", url: `/machines/${dryer.id}`, headers: ADMIN, payload: { cycleMinutes: 0 } });
+    expect(invalid.statusCode).toBe(400);
+  });
+
+  it("salva e altera o maquinário da máquina", async () => {
+    const { store } = await seed(s);
+    const created = (await s.app.inject({
+      method: "POST",
+      url: "/machines",
+      headers: ADMIN,
+      payload: { storeId: store.id, kind: "WASHER", label: "Lavadora 9", channel: 100, model: "SPEED_QUEEN" },
+    })).json();
+    expect(created.model).toBe("SPEED_QUEEN");
+    const patched = await s.app.inject({ method: "PATCH", url: `/machines/${created.id}`, headers: ADMIN, payload: { model: "MAMUTE" } });
+    expect(patched.json().model).toBe("MAMUTE");
+    const invalid = await s.app.inject({ method: "PATCH", url: `/machines/${created.id}`, headers: ADMIN, payload: { model: "XYZ" } });
+    expect(invalid.statusCode).toBe(400);
   });
 
   it("não vende máquina sem placa ESP32 e não quebra a lista de placas", async () => {

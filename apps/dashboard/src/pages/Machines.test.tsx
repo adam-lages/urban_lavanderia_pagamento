@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Board, Machine, Store } from "../api";
 import { renderApp } from "../test/render";
 
-const maranguape: Store = { id: "loja-maranguape-1", name: "Maranguape 1", code: "10000001", address: "Rua A", active: true };
+const maranguape: Store = { id: "loja-maranguape-1", name: "Maranguape 1", legalName: "", code: "10000001", address: "Rua A", cnpj: "11222333000181", role: "FRANQUIA", active: true };
 
 const washer: Machine = {
   id: "m-mar-1",
@@ -14,6 +14,8 @@ const washer: Machine = {
   label: "Lavadora 1",
   code: "100001",
   channel: 100,
+  model: "LG_FH069",
+  cycleMinutes: 30,
   deviceId: "esp-mar-1",
   priceOverrideCents: null,
   active: true,
@@ -32,6 +34,8 @@ const dryer: Machine = {
   label: "Secadora 1",
   code: "100003",
   channel: 300,
+  model: "LG_FH069",
+  cycleMinutes: 30,
   deviceId: "esp-mar-3",
   online: false,
   status: "OFFLINE",
@@ -68,6 +72,7 @@ beforeEach(() => {
     }
     if (parsed.pathname === "/api/machines/next-code") return json({ code: "847291" });
     if (parsed.pathname === "/api/stores") return json([maranguape]);
+    if (parsed.pathname === "/api/stores/loja-maranguape-1") return json(maranguape);
     if (parsed.pathname === "/api/boards") {
       const board: Board = {
         deviceId: "esp-aabbccddeeff",
@@ -107,81 +112,89 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("página Máquinas", () => {
-  it("pede a lavanderia e depois lista status e liberações", async () => {
-    const user = userEvent.setup();
-    renderApp("/maquinas", { token: "dev-admin-token" });
-    expect(await screen.findByRole("heading", { name: "Máquinas" })).toBeTruthy();
-    expect(screen.getByText("Selecione uma lavanderia")).toBeTruthy();
-    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
-    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
+const tablePath = "/lavanderias/loja-maranguape-1?tab=maquinas";
+
+describe("máquinas dentro da lavanderia", () => {
+  it("lista status e liberações na tab Máquinas", async () => {
+    renderApp(tablePath, { token: "dev-admin-token" });
     expect(await screen.findByText("Lavadora 1")).toBeTruthy();
     expect(screen.getByText("Secadora 1")).toBeTruthy();
     expect(screen.getByText("ONLINE")).toBeTruthy();
     expect(screen.getByText("OFFLINE")).toBeTruthy();
-    expect(screen.getByText("Bloqueada")).toBeTruthy();
-    await user.click(screen.getByRole("tab", { name: /Bloqueadas/ }));
+    expect(screen.queryByText("Bloqueada")).toBeNull();
+    expect(screen.getByRole("button", { name: "Desbloquear" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Liberar" }).length).toBeGreaterThan(0);
+  });
+
+  it("filtra as máquinas pela busca", async () => {
+    const user = userEvent.setup();
+    renderApp(tablePath, { token: "dev-admin-token" });
+    await screen.findByText("Lavadora 1");
+    await user.type(screen.getByRole("textbox", { name: "Buscar máquina" }), "secadora");
     expect(screen.queryByText("Lavadora 1")).toBeNull();
     expect(screen.getByText("Secadora 1")).toBeTruthy();
   });
 
-  it("abre os detalhes da máquina com o IP da ESP32", async () => {
-    const user = userEvent.setup();
-    renderApp("/maquinas", { token: "dev-admin-token" });
-    await user.click(await screen.findByLabelText("Filtrar por lavanderia"));
-    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
+  it("não mostra mais o menu Máquinas", async () => {
+    renderApp(tablePath, { token: "dev-admin-token" });
     await screen.findByText("Lavadora 1");
-    await user.click(screen.getByRole("button", { name: "Detalhes de Lavadora 1" }));
+    expect(screen.queryByRole("link", { name: "Máquinas" })).toBeNull();
+  });
+
+  it("abre os detalhes pelo olho e permite bloquear", async () => {
+    const user = userEvent.setup();
+    renderApp(tablePath, { token: "dev-admin-token" });
+    await user.click(await screen.findByRole("button", { name: "Detalhes de Lavadora 1" }));
     expect(await screen.findByRole("heading", { name: "Lavadora 1", level: 1 })).toBeTruthy();
     expect(screen.getByDisplayValue("10.1.2.8")).toBeTruthy();
-    expect(screen.getByDisplayValue("esp-mar-1")).toBeTruthy();
-    expect(screen.getByLabelText("Placa ESP32")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Maranguape 1" }).getAttribute("href")).toBe(tablePath);
     const lock = screen.getByRole("switch", { name: "Bloquear máquina" });
     expect(lock).toHaveProperty("checked", false);
     await user.click(lock);
     expect(await screen.findByText("BLOQUEADA")).toBeTruthy();
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/machines/m-mar-1") && c[1]?.method === "PATCH")).toBe(true);
   });
 
   it("abre detalhes de máquina bloqueada com o switch ligado", async () => {
-    const user = userEvent.setup();
-    renderApp("/maquinas", { token: "dev-admin-token" });
-    await user.click(await screen.findByLabelText("Filtrar por lavanderia"));
-    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
-    await screen.findByText("Secadora 1");
-    await user.click(screen.getByRole("button", { name: "Detalhes de Secadora 1" }));
+    renderApp("/lavanderias/loja-maranguape-1/maquinas/m-mar-3", { token: "dev-admin-token" });
     expect(await screen.findByRole("heading", { name: "Secadora 1", level: 1 })).toBeTruthy();
     expect(screen.getByRole("switch", { name: "Bloquear máquina" })).toHaveProperty("checked", true);
-    expect(screen.getByText("BLOQUEADA")).toBeTruthy();
   });
 
-  it("cadastra uma máquina nova", async () => {
+  it("vai do detalhe para a edição dentro da lavanderia", async () => {
     const user = userEvent.setup();
-    renderApp("/maquinas/nova", { token: "dev-admin-token" });
-    await screen.findByRole("heading", { name: "Nova máquina" });
+    renderApp("/lavanderias/loja-maranguape-1/maquinas/m-mar-1", { token: "dev-admin-token" });
+    await user.click(await screen.findByRole("button", { name: "Editar" }));
+    expect(await screen.findByRole("heading", { name: "Editar máquina" })).toBeTruthy();
     const code = await screen.findByRole("textbox", { name: "Código" });
-    expect(code).toHaveProperty("value", "847291");
-    expect(code).toHaveProperty("disabled", true);
-    const canal = screen.getByRole("textbox", { name: "Canal" });
-    expect(canal).toHaveProperty("disabled", true);
-    expect(canal).toHaveProperty("value", "100");
+    expect(code).toHaveProperty("value", "100001");
+    expect(code).toHaveProperty("readOnly", true);
+  });
+
+  it("cadastra uma máquina nova pela tab da lavanderia", async () => {
+    const user = userEvent.setup();
+    renderApp(tablePath, { token: "dev-admin-token" });
+    await user.click(await screen.findByRole("button", { name: "Nova máquina" }));
+    await screen.findByRole("heading", { name: "Nova máquina" });
+    expect(await screen.findByRole("textbox", { name: "Código" })).toHaveProperty("value", "847291");
     await user.click(screen.getByRole("checkbox", { name: "Alterar canal" }));
     expect(screen.getByRole("textbox", { name: "Canal" })).toHaveProperty("disabled", false);
-    await user.click(screen.getByLabelText("Lavanderia"));
-    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
+    expect(screen.getByLabelText("Maquinário").textContent).toContain("LG (FH069)");
+    await user.click(screen.getByLabelText("Maquinário"));
+    await user.click(await screen.findByRole("option", { name: "Speed Queen (200ms)" }));
+    const cycle = screen.getByRole("textbox", { name: "Tempo de ciclo" });
+    expect(cycle).toHaveProperty("value", "30");
+    expect(cycle).toHaveProperty("disabled", true);
+    await user.click(screen.getByLabelText("Tipo"));
+    await user.click(await screen.findByRole("option", { name: "Secadora" }));
+    expect(cycle).toHaveProperty("value", "45");
+    await user.click(screen.getByRole("checkbox", { name: "Alterar tempo de ciclo" }));
+    await user.clear(cycle);
+    await user.type(cycle, "50");
     await user.type(screen.getByRole("textbox", { name: "Nome" }), "Lavadora 9");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Lavadora 9", level: 1 })).toBeTruthy());
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/machines") && c[1]?.method === "POST")).toBe(true);
-  });
-
-  it("não deixa alterar o código na edição", async () => {
-    renderApp("/maquinas/m-mar-1/editar", { token: "dev-admin-token" });
-    const code = await screen.findByRole("textbox", { name: "Código" });
-    expect(code).toHaveProperty("value", "100001");
-    expect(code).toHaveProperty("disabled", true);
-    expect(code).toHaveProperty("readOnly", true);
+    const post = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/api/machines") && c[1]?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ model: "SPEED_QUEEN_200MS", kind: "DRYER", cycleMinutes: 50 });
   });
 });

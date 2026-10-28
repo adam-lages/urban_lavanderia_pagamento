@@ -10,14 +10,12 @@ export function SaleRow({ sale: s, onDetails }: { sale: Sale; onDetails: () => v
   const when = formatPaidAt(s.paidAt);
   return (
     <TableRow hover>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>{s.storeName}</TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>
         <Typography variant="subtitle2">{dash(s.customerName)}</Typography>
         <Typography variant="caption" color="text.disabled">
           {s.customerCpf ? formatCpf(s.customerCpf) : "—"}
         </Typography>
       </TableCell>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>{s.machineLabel}</TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>
         {s.paidAt ? (
           <>
@@ -26,6 +24,7 @@ export function SaleRow({ sale: s, onDetails }: { sale: Sale; onDetails: () => v
           </>
         ) : "—"}
       </TableCell>
+      <TableCell sx={{ whiteSpace: "nowrap" }}>{s.machineLabel}</TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>{brl(s.amountCents)}</TableCell>
       <TableCell>{paymentMethodLabel(s.paymentMethod)}</TableCell>
       <TableCell>{dash(s.couponCode)}</TableCell>

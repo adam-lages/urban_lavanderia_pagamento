@@ -10,7 +10,7 @@ import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
-import { machineKindLabel, machineStatusLabel, type Machine } from "../../api";
+import { machineKindLabel, machineModelLabel, machineStatusLabel, type Machine } from "../../api";
 import { Label } from "../../components/Label";
 import { formatDateParts } from "./format";
 
@@ -98,6 +98,8 @@ export function MachineProfile({
               slotProps={{ input: { readOnly: true } }}
             />
             <TextField label="Canal" value={String(m.channel)} slotProps={{ input: { readOnly: true } }} />
+            <TextField label="Tempo de ciclo" value={`${m.cycleMinutes} min`} slotProps={{ input: { readOnly: true } }} />
+            <TextField label="Maquinário" value={machineModelLabel(m.model)} slotProps={{ input: { readOnly: true } }} />
             <TextField label="Última vez vista" value={stamp(m.lastSeenAt)} slotProps={{ input: { readOnly: true } }} />
             <TextField label="Última liberação" value={stamp(m.lastReleasedAt)} slotProps={{ input: { readOnly: true } }} />
             <TextField label="Último bloqueio" value={stamp(m.lastBlockedAt)} slotProps={{ input: { readOnly: true } }} />

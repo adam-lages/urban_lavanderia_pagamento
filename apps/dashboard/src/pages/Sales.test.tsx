@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Sale, Store } from "../api";
 import { renderApp } from "../test/render";
 
-const maranguape: Store = { id: "loja-maranguape-1", name: "Maranguape 1", code: "10000001", address: "Rua A", active: true };
-const algarve: Store = { id: "loja-algarve", name: "Algarve", code: "10000003", address: "Rua B", active: true };
+const maranguape: Store = { id: "loja-maranguape-1", name: "Maranguape 1", legalName: "", code: "10000001", address: "Rua A", cnpj: "11222333000181", role: "FRANQUIA", active: true };
+const algarve: Store = { id: "loja-algarve", name: "Algarve", legalName: "", code: "10000003", address: "Rua B", cnpj: "55666777000181", role: "FRANQUEADO", active: true };
 
 const anaPix: Sale = {
   id: "sale-1",
@@ -83,14 +83,46 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+async function searchStore(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(await screen.findByRole("tab", { name: name === "Algarve" ? /Franqueados/ : /Franquia/ }));
+  await user.click(await screen.findByLabelText("Filtrar por lavanderia"));
+  await user.click(await screen.findByRole("option", { name }));
+  await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+}
+
 describe("página Vendas", () => {
+  it("só lista depois de escolher a lavanderia e pesquisar", async () => {
+    renderApp("/vendas", { token: "dev-admin-token" });
+    expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Pesquisar" })).toHaveProperty("disabled", true);
+    expect(screen.queryByText("Ana Souza")).toBeNull();
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/sales"))).toBe(false);
+  });
+
+  it("não mostra a tab Todos", async () => {
+    renderApp("/vendas", { token: "dev-admin-token" });
+    expect(await screen.findByRole("tab", { name: /Franquia/, selected: true })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: /Todos/ })).toBeNull();
+  });
+
+  it("separa as lavanderias por franquia e franqueados", async () => {
+    const user = userEvent.setup();
+    renderApp("/vendas", { token: "dev-admin-token" });
+    await user.click(await screen.findByRole("tab", { name: /Franqueados/ }));
+    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
+    expect(await screen.findByRole("option", { name: "Algarve" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Maranguape 1" })).toBeNull();
+  });
+
   it("mostra cliente, máquina, valor e método", async () => {
+    const user = userEvent.setup();
     renderApp("/vendas", { token: "dev-admin-token" });
     expect(await screen.findByRole("heading", { name: "Vendas" })).toBeTruthy();
+    await searchStore(user, "Maranguape 1");
     expect(await screen.findByText("Ana Souza")).toBeTruthy();
     expect(screen.getByText("529.982.247-25")).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Unidade" })).toBeTruthy();
-    expect(screen.getAllByText("Maranguape 1").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("columnheader", { name: "Unidade" })).toBeNull();
     expect(screen.getAllByText("Lavadora 1").length).toBeGreaterThan(0);
     expect(screen.getByText("PIX")).toBeTruthy();
     expect(screen.getByText("Crédito")).toBeTruthy();
@@ -104,6 +136,7 @@ describe("página Vendas", () => {
   it("abre o painel lateral com os dados da venda", async () => {
     const user = userEvent.setup();
     renderApp("/vendas", { token: "dev-admin-token" });
+    await searchStore(user, "Maranguape 1");
     await screen.findByText("Bruno Lima");
     await user.click(screen.getByRole("button", { name: "Detalhes da venda de Bruno Lima" }));
     expect(await screen.findByRole("heading", { name: "Detalhes da venda" })).toBeTruthy();
@@ -117,14 +150,12 @@ describe("página Vendas", () => {
   it("filtra por lavanderia e por nome só ao pesquisar", async () => {
     const user = userEvent.setup();
     renderApp("/vendas", { token: "dev-admin-token" });
-    await screen.findByText("Ana Souza");
-    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
-    await user.click(await screen.findByRole("option", { name: "Algarve" }));
-    expect(screen.getByText("Ana Souza")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Pesquisar" }));
-    await waitFor(() => expect(screen.queryByText("Ana Souza")).toBeNull());
-    expect(screen.getByText("Fábio Nunes")).toBeTruthy();
+    await searchStore(user, "Algarve");
+    expect(await screen.findByText("Fábio Nunes")).toBeTruthy();
+    expect(screen.queryByText("Ana Souza")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Limpar" }));
+    expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
+    await searchStore(user, "Maranguape 1");
     expect(await screen.findByText("Ana Souza")).toBeTruthy();
     await user.type(screen.getByRole("textbox", { name: "Filtrar por nome do cliente" }), "bruno");
     expect(screen.getByText("Ana Souza")).toBeTruthy();

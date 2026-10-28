@@ -1,11 +1,16 @@
 import type { Queryable } from "./db.js";
 import { mulberry32, randomCustomers } from "./demo-random.js";
 import { BASE_PRICE_CENTS, seedSalesIfEmpty } from "./demo-sales.js";
+import { defaultCycleMinutes } from "./services/machines.js";
+import { seedDefaultUsers } from "./services/users.js";
 
-const STORES: Array<{ id: string; name: string; code: string; address: string; prefix: string; slug: string; washers: number; dryers: number }> = [
-  { id: "loja-maranguape-1", name: "Maranguape 1", code: "10000001", address: "Av. Dr. Cláudio José Gueiros Leite, 100 — Maranguape", prefix: "1", slug: "mar", washers: 3, dryers: 3 },
-  { id: "loja-parque-recife", name: "Parque Recife", code: "10000002", address: "Av. Recife, 200 — Parque Recife", prefix: "2", slug: "par", washers: 2, dryers: 2 },
-  { id: "loja-algarve", name: "Algarve", code: "10000003", address: "Rua do Algarve, 50 — Imbiribeira", prefix: "3", slug: "alg", washers: 2, dryers: 2 },
+const STORES: Array<{
+  id: string; name: string; legalName: string; code: string; address: string; cnpj: string; role: "FRANQUIA" | "FRANQUEADO";
+  prefix: string; slug: string; washers: number; dryers: number;
+}> = [
+  { id: "loja-maranguape-1", name: "Maranguape 1", legalName: "Urban Lavanderia Maranguape Ltda", code: "10000001", address: "Av. Dr. Cláudio José Gueiros Leite, 100 — Maranguape", cnpj: "11222333000181", role: "FRANQUIA", prefix: "1", slug: "mar", washers: 3, dryers: 3 },
+  { id: "loja-parque-recife", name: "Parque Recife", legalName: "Urban Lavanderia Parque Recife Ltda", code: "10000002", address: "Av. Recife, 200 — Parque Recife", cnpj: "33444555000181", role: "FRANQUIA", prefix: "2", slug: "par", washers: 2, dryers: 2 },
+  { id: "loja-algarve", name: "Algarve", legalName: "Algarve Serviços de Lavanderia Ltda", code: "10000003", address: "Rua do Algarve, 50 — Imbiribeira", cnpj: "55666777000181", role: "FRANQUEADO", prefix: "3", slug: "alg", washers: 2, dryers: 2 },
 ];
 
 const RANDOM_CUSTOMERS_PER_STORE = 50;
@@ -43,7 +48,10 @@ async function storeIds(db: Queryable) {
 async function seedStoresIfEmpty(db: Queryable): Promise<boolean> {
   if ((await db.query("SELECT 1 FROM stores LIMIT 1")).rows.length) return false;
   for (const s of STORES) {
-    await db.query("INSERT INTO stores (id, name, code, address, created_at) VALUES ($1,$2,$3,$4,now())", [s.id, s.name, s.code, s.address]);
+    await db.query(
+      "INSERT INTO stores (id, name, legal_name, code, address, cnpj, role, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,now())",
+      [s.id, s.name, s.legalName, s.code, s.address, s.cnpj, s.role],
+    );
     await db.query(
       "INSERT INTO prices (id, store_id, kind, amount_cents, updated_at) VALUES ($1,$2,'WASHER',$4,now()),($3,$2,'DRYER',$4,now())",
       [`p-w-${s.id}`, s.id, `p-d-${s.id}`, BASE_PRICE_CENTS],
@@ -61,8 +69,8 @@ async function seedMachinesIfEmpty(db: Queryable) {
     ];
     for (const [i, m] of layout.entries()) {
       await db.query(
-        "INSERT INTO machines (id, store_id, kind, label, channel, device_id, code, created_at) VALUES ($1,$2,$3,$4,100,$5,$6,now())",
-        [`m-${s.slug}-${i + 1}`, s.id, m.kind, m.label, `esp-${s.slug}-${i + 1}`, `${s.prefix}${String(i + 1).padStart(5, "0")}`],
+        "INSERT INTO machines (id, store_id, kind, label, channel, device_id, code, created_at, cycle_minutes) VALUES ($1,$2,$3,$4,100,$5,$6,now(),$7)",
+        [`m-${s.slug}-${i + 1}`, s.id, m.kind, m.label, `esp-${s.slug}-${i + 1}`, `${s.prefix}${String(i + 1).padStart(5, "0")}`, defaultCycleMinutes(m.kind)],
       );
     }
   }
@@ -97,6 +105,7 @@ export async function seedIfEmpty(
   now: Date = new Date(),
 ): Promise<boolean> {
   const createdStores = await seedStoresIfEmpty(db);
+  await seedDefaultUsers(db);
   await seedMachinesIfEmpty(db);
   await seedDevicesIfEmpty(db, boardId, now);
   await seedCustomersIfEmpty(db);

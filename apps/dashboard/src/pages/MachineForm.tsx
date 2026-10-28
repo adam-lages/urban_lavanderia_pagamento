@@ -3,18 +3,23 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
-import Checkbox from "@mui/material/Checkbox";
-import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api, type Board, type Kind, type Machine } from "../api";
+import { useNavigate, useParams} from "react-router-dom";
+import { api, DEFAULT_MACHINE_MODEL, MACHINE_MODELS, type Board, type Kind, type Machine, type MachineModel } from "../api";
 import { PageHeader } from "../components/PageHeader";
 import { useStores } from "../hooks";
+import { DefaultableField } from "./machines/DefaultableField";
+import { storeMachinesPath } from "./stores/paths";
 
 const DEFAULT_CHANNEL = "100";
+const MAX_CYCLE_MINUTES = 240;
+
+function defaultCycleMinutes(kind: Kind) {
+  return kind === "DRYER" ? "45" : "30";
+}
 
 function boardLabel(b: Pick<Board, "deviceId" | "online" | "info">) {
   const ip = b.info?.ip ? ` · ${b.info.ip}` : "";
@@ -22,18 +27,21 @@ function boardLabel(b: Pick<Board, "deviceId" | "online" | "info">) {
 }
 
 export function MachineForm() {
-  const { id } = useParams();
-  const [params] = useSearchParams();
+  const { storeId: routeStoreId, machineId: id } = useParams();
   const isNew = !id;
   const navigate = useNavigate();
   const { stores } = useStores();
-  const [storeId, setStoreId] = useState(params.get("storeId") ?? "");
+  const [storeId, setStoreId] = useState(routeStoreId ?? "");
   const [kind, setKind] = useState<Kind>("WASHER");
+  const [model, setModel] = useState<MachineModel>(DEFAULT_MACHINE_MODEL);
   const [label, setLabel] = useState("");
   const [code, setCode] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [channel, setChannel] = useState(DEFAULT_CHANNEL);
   const [customChannel, setCustomChannel] = useState(false);
+  const [cycle, setCycle] = useState(defaultCycleMinutes("WASHER"));
+  const [customCycle, setCustomCycle] = useState(false);
+  const defaultCycle = defaultCycleMinutes(kind);
   const [boards, setBoards] = useState<Board[]>([]);
   const [linkedIds, setLinkedIds] = useState<string[]>([]);
   const [error, setError] = useState("");
@@ -71,18 +79,22 @@ export function MachineForm() {
       .then((m) => {
         setStoreId(m.storeId);
         setKind(m.kind);
+        setModel(m.model ?? DEFAULT_MACHINE_MODEL);
         setLabel(m.label);
         setCode(m.code);
         setDeviceId(m.deviceId);
         setChannel(String(m.channel));
         setCustomChannel(String(m.channel) !== DEFAULT_CHANNEL);
+        setCycle(String(m.cycleMinutes));
+        setCustomCycle(String(m.cycleMinutes) !== defaultCycleMinutes(m.kind));
         setLoaded(true);
         setError("");
       })
       .catch((e) => setError(e.message));
   }, [id, isNew]);
 
-  const cancelTo = isNew ? "/maquinas" : `/maquinas/${id}`;
+  const storeTo = storeMachinesPath(routeStoreId);
+  const cancelTo = isNew ? storeTo : `/lavanderias/${routeStoreId}/maquinas/${id}`;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,17 +103,19 @@ export function MachineForm() {
       const body = {
         storeId,
         kind,
+        model,
         label: label.trim(),
         code: isNew ? code : undefined,
         deviceId: deviceId.trim() || "",
         channel: Number(channel),
+        cycleMinutes: Number(customCycle ? cycle : defaultCycle),
       };
       if (isNew) {
         const created = await api<Machine>("/machines", { method: "POST", body });
-        navigate(`/maquinas/${created.id}`);
+        navigate(`/lavanderias/${routeStoreId}/maquinas/${created.id}`);
       } else {
         await api(`/machines/${id}`, { method: "PATCH", body });
-        navigate(`/maquinas/${id}`);
+        navigate(cancelTo);
       }
     } catch (err) {
       setError((err as Error).message);
@@ -118,13 +132,18 @@ export function MachineForm() {
     return free;
   }, [boards, linkedIds, deviceId]);
 
-  const canSave = Boolean(storeId && label.trim() && Number(channel) >= 100 && (!isNew || code));
+  const cycleOk = !customCycle || (Number(cycle) >= 1 && Number(cycle) <= MAX_CYCLE_MINUTES);
+  const canSave = Boolean(storeId && label.trim() && cycleOk && Number(channel) >= 100 && (!isNew || code));
 
   return (
     <>
       <PageHeader
         title={isNew ? "Nova máquina" : "Editar máquina"}
-        crumbs={[{ label: "Máquinas", to: "/maquinas" }, { label: isNew ? "Nova máquina" : "Editar" }]}
+        crumbs={[
+          { label: "Lavanderias", to: "/lavanderias" },
+          { label: stores.find((s) => s.id === routeStoreId)?.name ?? "Lavanderia", to: storeTo },
+          { label: isNew ? "Nova máquina" : "Editar" },
+        ]}
       />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       {loaded && (
@@ -138,7 +157,7 @@ export function MachineForm() {
                   value={storeId}
                   onChange={(e) => setStoreId(e.target.value)}
                   required
-                  disabled={!isNew}
+                  disabled
                   slotProps={{ htmlInput: { "aria-label": "Lavanderia" } }}
                 >
                   {stores.map((s) => (
@@ -154,6 +173,18 @@ export function MachineForm() {
                 >
                   <MenuItem value="WASHER">Lavadora</MenuItem>
                   <MenuItem value="DRYER">Secadora</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  label="Maquinário"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value as MachineModel)}
+                  helperText="Modelo das máquinas usadas na lavanderia."
+                  slotProps={{ htmlInput: { "aria-label": "Maquinário" } }}
+                >
+                  {MACHINE_MODELS.map((m) => (
+                    <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>
+                  ))}
                 </TextField>
                 <TextField
                   label="Nome"
@@ -183,31 +214,27 @@ export function MachineForm() {
                     <MenuItem key={b.deviceId} value={b.deviceId}>{boardLabel(b)}</MenuItem>
                   ))}
                 </TextField>
-                <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-                  <TextField
-                    label="Canal"
-                    value={customChannel ? channel : DEFAULT_CHANNEL}
-                    onChange={(e) => setChannel(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                    disabled={!customChannel}
-                    required
-                    helperText="Padrão 100. Marque ao lado para alterar."
-                    slotProps={{ htmlInput: { "aria-label": "Canal", inputMode: "numeric" } }}
-                  />
-                  <FormControlLabel
-                    sx={{ mt: 1, mr: 0, whiteSpace: "nowrap" }}
-                    control={
-                      <Checkbox
-                        checked={customChannel}
-                        onChange={(_, v) => {
-                          setCustomChannel(v);
-                          if (!v) setChannel(DEFAULT_CHANNEL);
-                        }}
-                        slotProps={{ input: { "aria-label": "Alterar canal" } }}
-                      />
-                    }
-                    label="Alterar"
-                  />
-                </Box>
+                <DefaultableField
+                  label="Canal"
+                  value={channel}
+                  defaultValue={DEFAULT_CHANNEL}
+                  custom={customChannel}
+                  maxDigits={4}
+                  helperText="Padrão 100. Marque ao lado para alterar."
+                  onChange={setChannel}
+                  onCustom={setCustomChannel}
+                />
+                <DefaultableField
+                  label="Tempo de ciclo"
+                  value={cycle}
+                  defaultValue={defaultCycle}
+                  custom={customCycle}
+                  maxDigits={3}
+                  unit="min"
+                  helperText={`Padrão ${defaultCycle} min para ${kind === "DRYER" ? "secar" : "lavar"}. Marque ao lado para alterar.`}
+                  onChange={setCycle}
+                  onCustom={setCustomCycle}
+                />
               </Box>
               <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end", mt: 3 }}>
                 <Button variant="outlined" color="inherit" onClick={() => navigate(cancelTo)}>

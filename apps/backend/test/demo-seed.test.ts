@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { seedIfEmpty } from "../src/demo-seed.js";
+import { SEED_FRANQUIA_EMAIL } from "../src/services/users.js";
 import { startStack, type Stack } from "./helpers.js";
 
 const NOW = new Date("2026-10-27T20:00:00.000Z");
@@ -16,6 +17,11 @@ afterEach(async () => {
 const rows = async (sql: string, params: unknown[] = []) => (await s.db.query(sql, params)).rows;
 
 describe("dados de demonstração", () => {
+  it("cria o login da franquia", async () => {
+    const users = await rows("SELECT email, role FROM users");
+    expect(users).toEqual([{ email: SEED_FRANQUIA_EMAIL, role: "FRANQUIA" }]);
+  });
+
   it("cria as máquinas de cada lavanderia com placa própria e código único", async () => {
     const counts = await rows(
       "SELECT s.name, m.kind, COUNT(*) AS n FROM machines m JOIN stores s ON s.id = m.store_id GROUP BY s.name, m.kind ORDER BY s.name, m.kind",

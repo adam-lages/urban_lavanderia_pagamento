@@ -1,5 +1,17 @@
 export type Kind = "WASHER" | "DRYER";
-export interface Store { id: string; name: string; code: string; address: string; active: boolean }
+export type Role = "FRANQUIA" | "FRANQUEADO";
+export const ROLES: Role[] = ["FRANQUIA", "FRANQUEADO"];
+export const ROLE_LABEL: Record<Role, string> = { FRANQUIA: "Franquia", FRANQUEADO: "Franqueado" };
+export interface Store {
+  id: string;
+  name: string;
+  legalName: string;
+  code: string;
+  address: string;
+  cnpj: string;
+  role: Role;
+  active: boolean;
+}
 export interface Customer {
   id: string;
   name: string;
@@ -33,6 +45,24 @@ export interface Sale {
   cardNumber: string;
 }
 export interface SalePage { items: Sale[]; total: number }
+export const MACHINE_MODELS = [
+  { value: "LG_FH069", label: "LG (FH069)" },
+  { value: "ELECTROLUX_WE1100P_TE1220E", label: "Electrolux (WE1100P/TE1220E)" },
+  { value: "MY_BUBBLE_PRO", label: "My Bubble Pro" },
+  { value: "MAYTAG", label: "Maytag" },
+  { value: "OASIS", label: "Oasis" },
+  { value: "GIRBAU_SMART_PLUS", label: "Girbau Smart Plus" },
+  { value: "MAMUTE", label: "Mamute" },
+  { value: "SPEED_QUEEN", label: "Speed Queen" },
+  { value: "SPEED_QUEEN_200MS", label: "Speed Queen (200ms)" },
+  { value: "SPEED_UNION_SDW_SDS", label: "Speed Union SDW/SDS" },
+  { value: "PADRAO", label: "Padrão" },
+] as const;
+export type MachineModel = (typeof MACHINE_MODELS)[number]["value"];
+export const DEFAULT_MACHINE_MODEL: MachineModel = "LG_FH069";
+export function machineModelLabel(value: string) {
+  return MACHINE_MODELS.find((m) => m.value === value)?.label ?? value;
+}
 export type MachineStatus = "ONLINE" | "OFFLINE" | "IN_USE";
 export interface Machine {
   id: string;
@@ -42,6 +72,8 @@ export interface Machine {
   label: string;
   code: string;
   channel: number;
+  model: MachineModel;
+  cycleMinutes: number;
   deviceId: string;
   priceOverrideCents: number | null;
   active: boolean;
@@ -81,9 +113,36 @@ export interface Overview {
   signups: { month: string; total: number; byDay: Array<{ date: string; count: number; cumulative: number }> };
 }
 
+export interface SessionUser {
+  id: string;
+  email: string;
+  role: Role;
+}
+
 const TOKEN_KEY = "lav_admin_token";
+const USER_KEY = "lav_user";
+
 export const getToken = () => localStorage.getItem(TOKEN_KEY) ?? "";
-export const setToken = (t: string) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY));
+export function getUser(): SessionUser | null {
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SessionUser;
+  } catch {
+    return null;
+  }
+}
+export function setSession(token: string, user: SessionUser | null) {
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+  if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+  else localStorage.removeItem(USER_KEY);
+}
+export const setToken = (t: string) => setSession(t, t ? getUser() : null);
+
+export async function loginRequest(email: string, password: string): Promise<{ token: string; user: SessionUser }> {
+  return api("/auth/login", { method: "POST", body: { email, password } });
+}
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const res = await fetch(`/api${path}`, {

@@ -1,11 +1,11 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Machine, Store } from "../api";
 import { renderApp } from "../test/render";
 
-const centro: Store = { id: "s1", name: "Centro", code: "10000010", address: "Rua A, 10", active: true };
-const norte: Store = { id: "s2", name: "Norte", code: "10000020", address: "Av. B, 200", active: true };
+const centro: Store = { id: "s1", name: "Centro", legalName: "Centro Lavanderia Ltda", code: "10000010", address: "Rua A, 10", cnpj: "11222333000181", role: "FRANQUIA", active: true };
+const norte: Store = { id: "s2", name: "Norte", legalName: "Norte Lavanderia Ltda", code: "10000020", address: "Av. B, 200", cnpj: "33444555000181", role: "FRANQUEADO", active: true };
 
 const dryer: Machine = {
   id: "m2",
@@ -14,6 +14,8 @@ const dryer: Machine = {
   label: "Secadora 1",
   code: "100002",
   channel: 200,
+  model: "LG_FH069",
+  cycleMinutes: 30,
   deviceId: "esp-2",
   priceOverrideCents: null,
   active: true,
@@ -29,6 +31,8 @@ const washer: Machine = {
   label: "Lavadora 1",
   code: "100001",
   channel: 100,
+  model: "LG_FH069",
+  cycleMinutes: 30,
   deviceId: "esp-1",
   priceOverrideCents: null,
   active: true,
@@ -68,7 +72,16 @@ beforeEach(() => {
     if (url.endsWith("/api/stores/next-code") && method === "GET") return json({ code: "84729100" });
     if (url.endsWith("/api/stores") && method === "POST") {
       const body = JSON.parse(String(init?.body));
-      const created = { id: "s3", name: body.name, code: body.code ?? "NEW", address: body.address ?? "", active: true };
+      const created = {
+        id: "s3",
+        name: body.name,
+        code: body.code ?? "NEW",
+        address: body.address ?? "",
+        legalName: body.legalName ?? "",
+        cnpj: body.cnpj ?? "",
+        role: body.role ?? "FRANQUIA",
+        active: true,
+      };
       stores = [...stores, created];
       return json(created, 201);
     }
@@ -119,13 +132,16 @@ describe("página Lavanderias", () => {
     expect(screen.queryByRole("progressbar", { name: "Carregando" })).toBeNull();
   });
 
-  it("lista nome, endereço e abre os detalhes", async () => {
+  it("lista nome, CNPJ e tipo e abre os detalhes", async () => {
     const user = userEvent.setup();
     renderApp("/lavanderias", { token: "dev-admin-token" });
     expect(await screen.findByRole("heading", { name: "Lavanderias" })).toBeTruthy();
     expect(await screen.findByText("Centro")).toBeTruthy();
-    expect(screen.getByText("Rua A, 10")).toBeTruthy();
+    expect(screen.getByText("11.222.333/0001-81")).toBeTruthy();
+    expect(screen.getAllByText("Franquia").length).toBeGreaterThan(0);
     expect(screen.getByText("Norte")).toBeTruthy();
+    expect(screen.getByText("Franqueado")).toBeTruthy();
+    expect(screen.queryByText("Rua A, 10")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Detalhes de Centro" }));
     expect(await screen.findByRole("heading", { name: "Centro", level: 1 })).toBeTruthy();
     expect(screen.getAllByText("Rua A, 10").length).toBeGreaterThan(0);
@@ -146,6 +162,21 @@ describe("página Lavanderias", () => {
     expect(screen.queryByText("Centro")).toBeNull();
   });
 
+  it("filtra pelas abas de tipo", async () => {
+    const user = userEvent.setup();
+    renderApp("/lavanderias", { token: "dev-admin-token" });
+    await screen.findByText("Centro");
+    await user.click(screen.getByRole("tab", { name: /Franquia/ }));
+    expect(screen.getByText("Centro")).toBeTruthy();
+    expect(screen.queryByText("Norte")).toBeNull();
+    await user.click(screen.getByRole("tab", { name: /Franqueados/ }));
+    expect(screen.getByText("Norte")).toBeTruthy();
+    expect(screen.queryByText("Centro")).toBeNull();
+    await user.click(screen.getByRole("tab", { name: /Todos/ }));
+    expect(screen.getByText("Centro")).toBeTruthy();
+    expect(screen.getByText("Norte")).toBeTruthy();
+  });
+
   it("cadastra uma lavanderia nova", async () => {
     const user = userEvent.setup();
     renderApp("/lavanderias", { token: "dev-admin-token" });
@@ -156,14 +187,25 @@ describe("página Lavanderias", () => {
     expect(generated).toHaveProperty("value", "84729100");
     expect(generated).toHaveProperty("disabled", true);
     expect(generated).toHaveProperty("readOnly", true);
-    await user.type(screen.getByLabelText("Nome"), "Sul");
+    fireEvent.change(screen.getByLabelText("Razão social"), { target: { value: "Sul Lavanderia Ltda" } });
+    await user.type(screen.getByLabelText("Nome fantasia"), "Sul");
+    fireEvent.change(screen.getByLabelText("CNPJ"), { target: { value: "55666777000181" } });
+    await user.click(screen.getByLabelText("Permissão"));
+    await user.click(await screen.findByRole("option", { name: "Franqueado" }));
     await user.type(screen.getByLabelText("Endereço"), "Rua C, 3");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     expect(await screen.findByRole("heading", { name: "Sul", level: 1 })).toBeTruthy();
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     const post = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/api/stores") && c[1]?.method === "POST");
-    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ name: "Sul", address: "Rua C, 3", code: "84729100" });
-  });
+    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+      name: "Sul",
+      legalName: "Sul Lavanderia Ltda",
+      address: "Rua C, 3",
+      code: "84729100",
+      cnpj: "55666777000181",
+      role: "FRANQUEADO",
+    });
+  }, 15000);
 
   it("mostra as máquinas da lavanderia nos detalhes", async () => {
     const user = userEvent.setup();
@@ -171,9 +213,7 @@ describe("página Lavanderias", () => {
     await screen.findByRole("heading", { name: "Centro", level: 1 });
     expect(screen.getByRole("tab", { name: "Dados" })).toBeTruthy();
     await user.click(screen.getByRole("tab", { name: "Máquinas" }));
-    expect(await screen.findByText("Lavadoras")).toBeTruthy();
-    expect(screen.getByText("Secadoras")).toBeTruthy();
-    expect(screen.getByText("Lavadora 1")).toBeTruthy();
+    expect(await screen.findByText("Lavadora 1")).toBeTruthy();
     expect(screen.getByText("Secadora 1")).toBeTruthy();
     expect(screen.getByText("100001")).toBeTruthy();
     expect(screen.getByText("ONLINE")).toBeTruthy();

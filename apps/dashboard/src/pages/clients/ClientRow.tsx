@@ -11,7 +11,6 @@ export function ClientRow({ customer: c, onDetails }: { customer: Customer; onDe
   const created = formatCreated(c.createdAt);
   return (
     <TableRow hover>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>{c.storeName || "—"}</TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>
         <Typography variant="subtitle2">{c.name}</Typography>
       </TableCell>

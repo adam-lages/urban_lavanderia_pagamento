@@ -1,28 +1,48 @@
 import { randomUUID } from "node:crypto";
+import type { Role } from "../auth.js";
+import { cnpjDigits, isValidCnpj } from "../cnpj.js";
 import type { Db } from "../db.js";
 import { HttpError } from "../errors.js";
 
 export interface StoreRow {
   id: string;
   name: string;
+  legalName: string;
   code: string;
   address: string;
+  cnpj: string;
+  role: Role;
   active: boolean;
 }
 
 export function mapStore(r: any): StoreRow {
-  return { id: r.id, name: r.name, code: r.code, address: r.address ?? "", active: r.active };
+  return {
+    id: r.id,
+    name: r.name,
+    legalName: r.legal_name ?? "",
+    code: r.code,
+    address: r.address ?? "",
+    cnpj: r.cnpj ?? "",
+    role: r.role,
+    active: r.active,
+  };
 }
 
 export interface StorePatch {
   name?: string;
+  legalName?: string;
   code?: string;
   address?: string;
+  cnpj?: string;
+  role?: Role;
   active?: boolean;
 }
 
 export interface StoreInput extends StorePatch {
   name: string;
+  legalName: string;
+  cnpj: string;
+  role: Role;
 }
 
 export const STORE_CODE = /^\d{8}$/;
@@ -31,6 +51,12 @@ export const MACHINE_CODE = /^\d{6}$/;
 export function randomDigitCode(length: number) {
   const min = 10 ** (length - 1);
   return String(min + Math.floor(Math.random() * 9 * min));
+}
+
+function requireCnpj(value: string) {
+  const digits = cnpjDigits(value);
+  if (!isValidCnpj(digits)) throw new HttpError(400, "CNPJ inválido", "invalid_cnpj");
+  return digits;
 }
 
 export class StoreService {
@@ -61,27 +87,38 @@ export class StoreService {
     throw new HttpError(500, "Não foi possível gerar um código único", "code_exhausted");
   }
 
+  private async assertCnpjFree(cnpj: string, exceptId?: string) {
+    const { rows } = await this.db.query("SELECT id, name FROM stores WHERE cnpj = $1", [cnpj]);
+    const taken = rows.find((r) => r.id !== exceptId);
+    if (taken) throw new HttpError(409, `Já existe uma lavanderia com este CNPJ (${taken.name}).`, "conflict");
+  }
+
   async create(input: StoreInput) {
     const id = randomUUID();
     const code = await this.uniqueCode(input.code?.trim() || undefined);
-    await this.db.query("INSERT INTO stores (id, name, code, address, created_at) VALUES ($1,$2,$3,$4,$5)", [
-      id,
-      input.name,
-      code,
-      input.address?.trim() ?? "",
-      new Date(),
-    ]);
+    const cnpj = requireCnpj(input.cnpj);
+    await this.assertCnpjFree(cnpj);
+    await this.db.query(
+      "INSERT INTO stores (id, name, legal_name, code, address, cnpj, role, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+      [id, input.name, input.legalName, code, input.address?.trim() ?? "", cnpj, input.role, new Date()],
+    );
     return this.get(id);
   }
 
   async update(id: string, input: StorePatch) {
+    const cur = await this.get(id);
+    const cnpj = input.cnpj !== undefined ? requireCnpj(input.cnpj) : cur.cnpj;
+    if (cnpj !== cur.cnpj) await this.assertCnpjFree(cnpj, id);
     const { rows } = await this.db.query(
       `UPDATE stores SET
          name = COALESCE($2, name),
          address = COALESCE($3, address),
-         active = COALESCE($4, active)
+         cnpj = $4,
+         role = COALESCE($5, role),
+         active = COALESCE($6, active),
+         legal_name = COALESCE($7, legal_name)
        WHERE id = $1 RETURNING *`,
-      [id, input.name ?? null, input.address ?? null, input.active ?? null],
+      [id, input.name ?? null, input.address ?? null, cnpj, input.role ?? null, input.active ?? null, input.legalName ?? null],
     );
     if (!rows[0]) throw new HttpError(404, "Lavanderia não encontrada", "not_found");
     return mapStore(rows[0]);

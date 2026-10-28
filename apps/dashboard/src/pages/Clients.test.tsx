@@ -90,8 +90,8 @@ beforeEach(() => {
     }
     if (parsed.pathname === "/api/stores") {
       return json([
-        { id: "loja-maranguape-1", name: "Maranguape 1", code: "10000001", address: "", active: true },
-        { id: "loja-algarve", name: "Algarve", code: "10000003", address: "", active: true },
+        { id: "loja-maranguape-1", name: "Maranguape 1", code: "10000001", address: "", role: "FRANQUIA", active: true },
+        { id: "loja-algarve", name: "Algarve", code: "10000003", address: "", role: "FRANQUEADO", active: true },
       ]);
     }
     if (parsed.pathname === "/api/customers") {
@@ -101,7 +101,7 @@ beforeEach(() => {
       const filtered = items.filter((c) =>
         (!name || c.name.toLowerCase().includes(name)) &&
         (!cpf || c.cpf.includes(cpf)) &&
-        (!storeId || (storeId === "loja-maranguape-1" && c.id === "cli-ana")),
+        (!storeId || storeId === "loja-algarve" || c.id === "cli-ana"),
       );
       const page = Number(parsed.searchParams.get("page") ?? 0);
       const limit = Number(parsed.searchParams.get("limit") ?? 10);
@@ -118,15 +118,45 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+async function searchStore(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(await screen.findByRole("tab", { name: name === "Algarve" ? /Franqueados/ : /Franquia/ }));
+  await user.click(await screen.findByLabelText("Filtrar por lavanderia"));
+  await user.click(await screen.findByRole("option", { name }));
+  await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+}
+
 describe("página Clientes", () => {
+  it("só lista depois de escolher a lavanderia e pesquisar", async () => {
+    renderApp("/clientes", { token: "dev-admin-token" });
+    expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Pesquisar" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Exportar" })).toHaveProperty("disabled", true);
+    expect(screen.queryByText("Ana Souza")).toBeNull();
+  });
+
+  it("não mostra a tab Todos", async () => {
+    renderApp("/clientes", { token: "dev-admin-token" });
+    expect(await screen.findByRole("tab", { name: /Franquia/, selected: true })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: /Todos/ })).toBeNull();
+  });
+
+  it("separa as lavanderias por franquia e franqueados", async () => {
+    const user = userEvent.setup();
+    renderApp("/clientes", { token: "dev-admin-token" });
+    await user.click(await screen.findByRole("tab", { name: /Franquia/ }));
+    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
+    expect(await screen.findByRole("option", { name: "Maranguape 1" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Algarve" })).toBeNull();
+  });
+
   it("mostra colunas, status e abre os detalhes", async () => {
     const user = userEvent.setup();
     renderApp("/clientes", { token: "dev-admin-token" });
     expect(await screen.findByRole("heading", { name: "Clientes" })).toBeTruthy();
+    await searchStore(user, "Algarve");
     expect(await screen.findByText("Ana Souza")).toBeTruthy();
     expect(screen.getByText("529.982.247-25")).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Unidade" })).toBeTruthy();
-    expect(screen.getAllByText("Algarve").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("columnheader", { name: "Unidade" })).toBeNull();
     expect(screen.queryByRole("columnheader", { name: "Dt Nascimento" })).toBeNull();
     expect(screen.queryByRole("columnheader", { name: "Email" })).toBeNull();
     expect(screen.getByText("ATIVO")).toBeTruthy();
@@ -157,6 +187,7 @@ describe("página Clientes", () => {
   it("filtra por nome só ao pesquisar e limpa os filtros", async () => {
     const user = userEvent.setup();
     renderApp("/clientes", { token: "dev-admin-token" });
+    await searchStore(user, "Algarve");
     await screen.findByText("Carla Mendes");
     await user.type(screen.getByRole("textbox", { name: "Filtrar por nome" }), "ana");
     expect(screen.getByText("Carla Mendes")).toBeTruthy();
@@ -166,20 +197,16 @@ describe("página Clientes", () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("name=ana"))).toBe(true);
     await user.click(screen.getByRole("button", { name: "Limpar" }));
-    expect(await screen.findByText("Carla Mendes")).toBeTruthy();
+    expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Filtrar por nome" })).toHaveProperty("value", "");
   });
 
   it("filtra os clientes pela lavanderia só ao pesquisar", async () => {
     const user = userEvent.setup();
     renderApp("/clientes", { token: "dev-admin-token" });
-    await screen.findByText("Carla Mendes");
-    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
-    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
-    expect(screen.getByText("Carla Mendes")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Pesquisar" }));
-    await waitFor(() => expect(screen.queryByText("Carla Mendes")).toBeNull());
-    expect(screen.getByText("Ana Souza")).toBeTruthy();
+    await searchStore(user, "Maranguape 1");
+    expect(await screen.findByText("Ana Souza")).toBeTruthy();
+    expect(screen.queryByText("Carla Mendes")).toBeNull();
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("storeId=loja-maranguape-1"))).toBe(true);
   });
@@ -192,6 +219,7 @@ describe("página Clientes", () => {
     const orig = HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click = click;
     renderApp("/clientes", { token: "dev-admin-token" });
+    await searchStore(user, "Algarve");
     await screen.findByText("Ana Souza");
     await user.click(screen.getByRole("button", { name: "Exportar" }));
     expect(click).toHaveBeenCalled();

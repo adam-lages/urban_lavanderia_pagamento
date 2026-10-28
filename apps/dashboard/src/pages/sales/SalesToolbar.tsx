@@ -41,7 +41,7 @@ export function SalesToolbar({
         sx={{ width: { xs: 1, sm: 260 } }}
         slotProps={{ htmlInput: { "aria-label": "Filtrar por lavanderia" } }}
       >
-        <MenuItem value="">Todas</MenuItem>
+        <MenuItem value="" disabled>Selecione a lavanderia</MenuItem>
         {stores.map((s) => (
           <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
         ))}
@@ -64,7 +64,7 @@ export function SalesToolbar({
           },
         }}
       />
-      <Button type="submit" variant="contained" color="inherit">
+      <Button type="submit" variant="contained" color="inherit" disabled={!storeId}>
         Pesquisar
       </Button>
       <Button type="button" variant="outlined" color="inherit" onClick={onClear}>

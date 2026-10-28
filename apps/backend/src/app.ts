@@ -4,6 +4,7 @@ import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { ZodError, z } from "zod";
 import { MAX_CHANNEL, MIN_CHANNEL } from "@lav/protocol";
+import { ROLES, resolveAuth, setUser, userOf } from "./auth.js";
 import type { Config } from "./config.js";
 import { isUniqueViolation, type Db } from "./db.js";
 import { HttpError } from "./errors.js";
@@ -15,10 +16,11 @@ import { BoardService } from "./services/boards.js";
 import { OrderService } from "./services/orders.js";
 import { ReleaseService, mapCommand } from "./services/releases.js";
 import { CustomerService } from "./services/customers.js";
-import { MachineService, mapMachine } from "./services/machines.js";
+import { DEFAULT_MACHINE_MODEL, defaultCycleMinutes, MACHINE_MODELS, MAX_CYCLE_MINUTES, MachineService, mapMachine } from "./services/machines.js";
 import { OverviewService } from "./services/overview.js";
 import { SalesService } from "./services/sales.js";
-import { MACHINE_CODE, STORE_CODE, StoreService } from "./services/stores.js";
+import { MACHINE_CODE, STORE_CODE, StoreService, mapStore } from "./services/stores.js";
+import { login as loginUser } from "./services/users.js";
 
 export interface AppDeps {
   db: Db;
@@ -47,10 +49,12 @@ export interface LavHttp {
 }
 
 const kind = z.enum(["WASHER", "DRYER"]);
+const model = z.enum(MACHINE_MODELS);
+const cycleMinutes = z.number().int().min(1).max(MAX_CYCLE_MINUTES);
 const channel = z.number().int().min(MIN_CHANNEL).max(MAX_CHANNEL);
 
-const mapStore = (r: any) => ({ id: r.id, name: r.name, code: r.code, address: r.address ?? "", active: r.active });
 const mapPrice = (r: any) => ({ id: r.id, storeId: r.store_id, kind: r.kind, amountCents: r.amount_cents });
+const storeRole = z.enum(ROLES);
 
 function run(handler: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -87,8 +91,17 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
 
   const bearer = (req: Request) => (req.headers.authorization ?? "").toString().replace(/^Bearer\s+/i, "");
   const requireAdmin = (req: Request, _res: Response, next: NextFunction) => {
-    if (bearer(req) !== config.adminToken) return next(new HttpError(401, "Não autorizado", "unauthorized"));
+    const user = resolveAuth(bearer(req), config.adminToken);
+    if (!user) return next(new HttpError(401, "Não autorizado", "unauthorized"));
+    setUser(req, user);
     next();
+  };
+  const requireFranquia = (req: Request, res: Response, next: NextFunction) => {
+    requireAdmin(req, res, (err) => {
+      if (err) return next(err);
+      if (userOf(req)?.role !== "FRANQUIA") return next(new HttpError(403, "Sem permissão", "forbidden"));
+      next();
+    });
   };
   const requirePos = (req: Request, _res: Response, next: NextFunction) => {
     const t = bearer(req);
@@ -99,34 +112,50 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
+  app.post("/auth/login", run(async (req, res) => {
+    const b = z.object({ email: z.string().trim().email(), password: z.string().min(1) }).parse(req.body);
+    res.json(await loginUser(db, config.adminToken, b.email, b.password));
+  }));
+  app.get("/auth/me", requireAdmin, run(async (req, res) => {
+    const user = userOf(req)!;
+    res.json({ id: user.id, email: user.email, role: user.role });
+  }));
 
   const storeBody = z.object({
     name: z.string().trim().min(1).max(80).optional(),
+    legalName: z.string().trim().min(1).max(160).optional(),
     code: z.string().regex(STORE_CODE).optional(),
     address: z.string().max(240).optional(),
+    cnpj: z.string().min(1).optional(),
+    role: storeRole.optional(),
     active: z.boolean().optional(),
   });
   app.get("/stores", requireAdmin, run(async (_req, res) => {
     res.json(await stores.list());
   }));
-  app.get("/stores/next-code", requireAdmin, run(async (_req, res) => {
+  app.get("/stores/next-code", requireFranquia, run(async (_req, res) => {
     res.json({ code: await stores.uniqueCode() });
   }));
-  app.post("/stores", requireAdmin, run(async (req, res) => {
-    const b = storeBody.extend({ name: z.string().trim().min(1).max(80) }).parse(req.body);
+  app.post("/stores", requireFranquia, run(async (req, res) => {
+    const b = storeBody.extend({
+      name: z.string().trim().min(1).max(80),
+      legalName: z.string().trim().min(1).max(160),
+      cnpj: z.string().min(1),
+      role: storeRole,
+    }).parse(req.body);
     res.status(201).json(await stores.create(b));
   }));
-  app.get("/stores/:id", requireAdmin, run(async (req, res) => {
+  app.get("/stores/:id", requireFranquia, run(async (req, res) => {
     res.json(await stores.get(req.params.id));
   }));
-  app.patch("/stores/:id", requireAdmin, run(async (req, res) => {
+  app.patch("/stores/:id", requireFranquia, run(async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(req.body, "code")) {
       throw new HttpError(400, "O código da lavanderia não pode ser alterado", "code_immutable");
     }
     const { code: _code, ...patch } = storeBody.parse(req.body);
     res.json(await stores.update(req.params.id, patch));
   }));
-  app.delete("/stores/:id", requireAdmin, run(async (req, res) => {
+  app.delete("/stores/:id", requireFranquia, run(async (req, res) => {
     await stores.remove(req.params.id);
     res.status(204).send();
   }));
@@ -185,21 +214,21 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     return mapMachine(r, online, online && busySet.has(r.device_id), released);
   }
 
-  app.get("/machines", requireAdmin, run(async (req, res) => {
+  app.get("/machines", requireFranquia, run(async (req, res) => {
     const { storeId } = z.object({ storeId: z.string().optional() }).parse(req.query);
     const { rows, last } = await machines.list(storeId);
     const busy = await busyDevices();
     res.json(await Promise.all(rows.map((r) => present(r, last, busy))));
   }));
-  app.get("/machines/next-code", requireAdmin, run(async (_req, res) => {
+  app.get("/machines/next-code", requireFranquia, run(async (_req, res) => {
     res.json({ code: await machines.uniqueCode() });
   }));
-  app.get("/machines/:id", requireAdmin, run(async (req, res) => {
+  app.get("/machines/:id", requireFranquia, run(async (req, res) => {
     const { row, lastReleasedAt } = await machines.get(req.params.id);
     const last = new Map<string, string>([[row.id, lastReleasedAt]]);
     res.json(await present(row, last));
   }));
-  app.post("/machines", requireAdmin, run(async (req, res) => {
+  app.post("/machines", requireFranquia, run(async (req, res) => {
     const b = z
       .object({
         storeId: z.string(),
@@ -207,6 +236,8 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
         label: z.string().min(1),
         code: z.string().regex(MACHINE_CODE).optional(),
         channel,
+        model: model.default(DEFAULT_MACHINE_MODEL),
+        cycleMinutes: cycleMinutes.optional(),
         deviceId: z.string().optional(),
         priceOverrideCents: z.number().int().min(0).nullable().optional(),
       })
@@ -218,19 +249,21 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     const id = randomUUID();
     const code = await machines.uniqueCode(b.code);
     await db.query(
-      "INSERT INTO machines (id, store_id, kind, label, channel, device_id, price_override_cents, code, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
-      [id, b.storeId, b.kind, b.label, b.channel, deviceId, b.priceOverrideCents ?? null, code, new Date()],
+      "INSERT INTO machines (id, store_id, kind, label, channel, device_id, price_override_cents, code, created_at, model, cycle_minutes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+      [id, b.storeId, b.kind, b.label, b.channel, deviceId, b.priceOverrideCents ?? null, code, new Date(), b.model, b.cycleMinutes ?? defaultCycleMinutes(b.kind)],
     );
     const got = await machines.get(id);
     res.status(201).json(await present(got.row, new Map([[id, got.lastReleasedAt]])));
   }));
-  app.patch("/machines/:id", requireAdmin, run(async (req, res) => {
+  app.patch("/machines/:id", requireFranquia, run(async (req, res) => {
     const { id } = req.params;
     const b = z
       .object({
         label: z.string().min(1).optional(),
         kind: kind.optional(),
         channel: channel.optional(),
+        model: model.optional(),
+        cycleMinutes: cycleMinutes.optional(),
         deviceId: z.string().optional(),
         active: z.boolean().optional(),
         blocked: z.boolean().optional(),
@@ -249,21 +282,21 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     const becomingBlocked = active === false && cur.active === true;
     const blockedAt = becomingBlocked ? new Date() : cur.blocked_at;
     await db.query(
-      "UPDATE machines SET label=$2, kind=$3, channel=$4, device_id=$5, active=$6, price_override_cents=$7, blocked_at=$8 WHERE id=$1",
-      [id, b.label ?? cur.label, b.kind ?? cur.kind, b.channel ?? cur.channel, deviceId, active, override, blockedAt],
+      "UPDATE machines SET label=$2, kind=$3, channel=$4, device_id=$5, active=$6, price_override_cents=$7, blocked_at=$8, model=$9, cycle_minutes=$10 WHERE id=$1",
+      [id, b.label ?? cur.label, b.kind ?? cur.kind, b.channel ?? cur.channel, deviceId, active, override, blockedAt, b.model ?? cur.model, b.cycleMinutes ?? cur.cycle_minutes],
     );
     const got = await machines.get(id);
     res.json(await present(got.row, new Map([[id, got.lastReleasedAt]])));
   }));
 
-  app.get("/prices", requireAdmin, run(async (req, res) => {
+  app.get("/prices", requireFranquia, run(async (req, res) => {
     const { storeId } = z.object({ storeId: z.string().optional() }).parse(req.query);
     const { rows } = storeId
       ? await db.query("SELECT * FROM prices WHERE store_id = $1 ORDER BY kind", [storeId])
       : await db.query("SELECT * FROM prices ORDER BY store_id, kind");
     res.json(rows.map(mapPrice));
   }));
-  app.put("/prices", requireAdmin, run(async (req, res) => {
+  app.put("/prices", requireFranquia, run(async (req, res) => {
     const b = z.object({ storeId: z.string(), kind, amountCents: z.number().int().min(0) }).parse(req.body);
     const store = await db.query("SELECT id FROM stores WHERE id = $1", [b.storeId]);
     if (!store.rows[0]) throw new HttpError(404, "Loja não encontrada", "not_found");
@@ -365,21 +398,21 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     res.json(mapCommand(c));
   }));
 
-  app.get("/boards", requireAdmin, run(async (_req, res) => {
+  app.get("/boards", requireFranquia, run(async (_req, res) => {
     res.json(await boards.list());
   }));
-  app.patch("/boards/:deviceId", requireAdmin, run(async (req, res) => {
+  app.patch("/boards/:deviceId", requireFranquia, run(async (req, res) => {
     const { deviceId } = req.params;
     const b = z.object({ name: z.string().trim().min(1).max(80).optional(), storeId: z.string().optional(), kind: kind.optional() }).parse(req.body);
     res.json(await boards.update(deviceId, b));
   }));
-  app.post("/boards/:deviceId/release", requireAdmin, run(async (req, res) => {
+  app.post("/boards/:deviceId/release", requireFranquia, run(async (req, res) => {
     const { deviceId } = req.params;
     const id = await boards.release(deviceId);
     const c = (await db.query("SELECT * FROM release_commands WHERE id = $1", [id])).rows[0];
     res.status(202).json(mapCommand(c));
   }));
-  app.get("/devices", requireAdmin, run(async (_req, res) => {
+  app.get("/devices", requireFranquia, run(async (_req, res) => {
     const { rows } = await db.query("SELECT DISTINCT device_id FROM machines WHERE device_id IS NOT NULL");
     res.json(rows.map((r) => ({ deviceId: r.device_id, online: gateway.isOnline(r.device_id) })));
   }));

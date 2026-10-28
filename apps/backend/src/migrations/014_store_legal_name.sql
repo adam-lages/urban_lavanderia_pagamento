@@ -1,0 +1,1 @@
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS legal_name text NOT NULL DEFAULT '';

@@ -25,6 +25,26 @@ export function runStatus(online: boolean, inUse: boolean): MachineRunStatus {
   return "ONLINE";
 }
 
+export const MACHINE_MODELS = [
+  "LG_FH069",
+  "ELECTROLUX_WE1100P_TE1220E",
+  "MY_BUBBLE_PRO",
+  "MAYTAG",
+  "OASIS",
+  "GIRBAU_SMART_PLUS",
+  "MAMUTE",
+  "SPEED_QUEEN",
+  "SPEED_QUEEN_200MS",
+  "SPEED_UNION_SDW_SDS",
+  "PADRAO",
+] as const;
+export const DEFAULT_MACHINE_MODEL = "LG_FH069";
+export const MAX_CYCLE_MINUTES = 240;
+
+export function defaultCycleMinutes(kind: string) {
+  return kind === "DRYER" ? 45 : 30;
+}
+
 export function mapMachine(r: any, online = false, inUse = false, lastReleasedAt = "") {
   return {
     id: r.id,
@@ -34,6 +54,8 @@ export function mapMachine(r: any, online = false, inUse = false, lastReleasedAt
     label: r.label,
     code: r.code ?? "",
     channel: r.channel,
+    model: r.model ?? DEFAULT_MACHINE_MODEL,
+    cycleMinutes: r.cycle_minutes ?? defaultCycleMinutes(r.kind),
     deviceId: r.device_id ?? "",
     priceOverrideCents: r.price_override_cents,
     active: r.active,

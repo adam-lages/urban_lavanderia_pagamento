@@ -15,11 +15,14 @@ describe("lavanderias", () => {
       method: "POST",
       url: "/stores",
       headers: ADMIN,
-      payload: { name: "Centro", address: "Rua A, 10" },
+      payload: { name: "Centro", legalName: "Razão Social", address: "Rua A, 10", cnpj: "11.222.333/0001-81", role: "FRANQUIA" },
     });
     expect(created.statusCode).toBe(201);
     const store = created.json();
+    expect(store.legalName).toBe("Razão Social");
     expect(store.address).toBe("Rua A, 10");
+    expect(store.cnpj).toBe("11222333000181");
+    expect(store.role).toBe("FRANQUIA");
     expect(store.code).toMatch(/^\d{8}$/);
     expect(store.active).toBe(true);
 
@@ -30,11 +33,14 @@ describe("lavanderias", () => {
       method: "PATCH",
       url: `/stores/${store.id}`,
       headers: ADMIN,
-      payload: { name: "Centro Sul", address: "Rua B, 20" },
+      payload: { name: "Centro Sul", legalName: "Centro Sul Lavanderia Ltda", address: "Rua B, 20", cnpj: "33.444.555/0001-81", role: "FRANQUEADO" },
     });
     expect(patched.statusCode).toBe(200);
     expect(patched.json().name).toBe("Centro Sul");
+    expect(patched.json().legalName).toBe("Centro Sul Lavanderia Ltda");
     expect(patched.json().address).toBe("Rua B, 20");
+    expect(patched.json().cnpj).toBe("33444555000181");
+    expect(patched.json().role).toBe("FRANQUEADO");
     expect(patched.json().code).toBe(store.code);
 
     const keepCode = await s.app.inject({
@@ -56,7 +62,7 @@ describe("lavanderias", () => {
   });
 
   it("gera código de 8 dígitos que ainda não existe no banco", async () => {
-    await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "A", code: "10000001" } });
+    await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "A", legalName: "Razão Social", code: "10000001", cnpj: "11222333000181", role: "FRANQUIA" } });
     const next = await s.app.inject({ method: "GET", url: "/stores/next-code", headers: ADMIN });
     expect(next.statusCode).toBe(200);
     expect(next.json().code).toMatch(/^\d{8}$/);
@@ -65,10 +71,34 @@ describe("lavanderias", () => {
   });
 
   it("recusa código duplicado", async () => {
-    await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "A", code: "10000001" } });
-    const dup = await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "B", code: "10000001" } });
+    await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "A", legalName: "Razão Social", code: "10000001", cnpj: "11222333000181", role: "FRANQUIA" } });
+    const dup = await s.app.inject({ method: "POST", url: "/stores", headers: ADMIN, payload: { name: "B", legalName: "Razão Social", code: "10000001", cnpj: "33444555000181", role: "FRANQUEADO" } });
     expect(dup.statusCode).toBe(409);
     expect(dup.json().message).toMatch(/código/);
+  });
+
+  it("recusa CNPJ inválido ou repetido", async () => {
+    const bad = await s.app.inject({
+      method: "POST",
+      url: "/stores",
+      headers: ADMIN,
+      payload: { name: "A", legalName: "Razão Social", cnpj: "11111111111111", role: "FRANQUIA" },
+    });
+    expect(bad.statusCode).toBe(400);
+    await s.app.inject({
+      method: "POST",
+      url: "/stores",
+      headers: ADMIN,
+      payload: { name: "A", legalName: "Razão Social", cnpj: "11222333000181", role: "FRANQUIA" },
+    });
+    const dup = await s.app.inject({
+      method: "POST",
+      url: "/stores",
+      headers: ADMIN,
+      payload: { name: "B", legalName: "Razão Social", cnpj: "11.222.333/0001-81", role: "FRANQUEADO" },
+    });
+    expect(dup.statusCode).toBe(409);
+    expect(dup.json().message).toMatch(/CNPJ/);
   });
 
   it("exclui lavanderia sem vendas e remove máquinas", async () => {

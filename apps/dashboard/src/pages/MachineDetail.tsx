@@ -6,9 +6,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api, type Machine } from "../api";
 import { PageHeader } from "../components/PageHeader";
 import { MachineProfile } from "./machines/MachineProfile";
+import { storeMachinesPath } from "./stores/paths";
 
 export function MachineDetail() {
-  const { id } = useParams();
+  const { storeId, machineId: id } = useParams();
   const navigate = useNavigate();
   const [machine, setMachine] = useState<Machine | null>(null);
   const [error, setError] = useState("");
@@ -41,10 +42,14 @@ export function MachineDetail() {
     <>
       <PageHeader
         title={machine?.label ?? "Máquina"}
-        crumbs={[{ label: "Máquinas", to: "/maquinas" }, { label: machine?.label ?? "Detalhes" }]}
+        crumbs={[
+          { label: "Lavanderias", to: "/lavanderias" },
+          { label: machine?.storeName ?? "Lavanderia", to: storeMachinesPath(storeId) },
+          { label: machine?.label ?? "Detalhes" },
+        ]}
         action={
           machine && (
-            <Button variant="outlined" color="inherit" startIcon={<EditOutlined />} onClick={() => navigate(`/maquinas/${id}/editar`)}>
+            <Button variant="outlined" color="inherit" startIcon={<EditOutlined />} onClick={() => navigate(`/lavanderias/${storeId}/maquinas/${id}/editar`)}>
               Editar
             </Button>
           )

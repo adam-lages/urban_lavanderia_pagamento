@@ -1,6 +1,5 @@
 import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOutlined";
 import DashboardOutlined from "@mui/icons-material/DashboardOutlined";
-import LocalLaundryServiceOutlined from "@mui/icons-material/LocalLaundryServiceOutlined";
 import PeopleOutlined from "@mui/icons-material/PeopleOutlined";
 import ReceiptLongOutlined from "@mui/icons-material/ReceiptLongOutlined";
 import StorefrontOutlined from "@mui/icons-material/StorefrontOutlined";
@@ -16,7 +15,8 @@ import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import { NavLink } from "react-router-dom";
 import { Logo } from "../components/Logo";
-import { NAV_ITEMS, NAV_SECTIONS } from "../nav";
+import { useAuth } from "../auth";
+import { NAV_ITEMS, NAV_SECTIONS, canSeeSection } from "../nav";
 import { DRAWER_WIDTH, HEADER_HEIGHT } from "../theme";
 import { GREY } from "../theme/palette";
 
@@ -32,10 +32,10 @@ const ICONS: Record<(typeof NAV_ITEMS)[number]["to"], SvgIconComponent> = {
   "/vendas": ReceiptLongOutlined,
   "/lavanderias": StorefrontOutlined,
   "/cupons": ConfirmationNumberOutlined,
-  "/maquinas": LocalLaundryServiceOutlined,
 };
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
+  const { role } = useAuth();
   return (
     <>
       <Box sx={{ height: HEADER_HEIGHT, px: 2.5, display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -48,7 +48,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         </Box>
       </Box>
       <Box component="nav" aria-label="Menu principal" sx={{ px: 2, pb: 3 }}>
-        {NAV_SECTIONS.map((section) => (
+        {NAV_SECTIONS.filter((section) => canSeeSection(section, role)).map((section) => (
           <List key={section} disablePadding subheader={<ListSubheader disableSticky>{section}</ListSubheader>}>
             {NAV_ITEMS.filter((item) => item.section === section).map((item) => {
               const Icon = ICONS[item.to];
