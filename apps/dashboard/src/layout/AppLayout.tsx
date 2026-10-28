@@ -3,7 +3,6 @@ import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
@@ -31,9 +30,7 @@ export function AppLayout() {
           <IconButton edge="start" aria-label="Abrir menu" onClick={() => setMobileOpen(true)} sx={{ display: { lg: "none" } }}>
             <MenuRounded />
           </IconButton>
-          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
-            Operação das lavanderias
-          </Typography>
+          <Box sx={{ flexGrow: 1 }} />
           <AccountMenu />
         </Toolbar>
       </AppBar>

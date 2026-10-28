@@ -53,7 +53,9 @@ export const components: Components<Theme> = {
     styleOverrides: { root: { backgroundImage: "none" }, rounded: { borderRadius: 16 } },
   },
   MuiCard: {
-    styleOverrides: { root: { borderRadius: 16, boxShadow: SHADOWS.card, position: "relative", zIndex: 0 } },
+    styleOverrides: {
+      root: { borderRadius: 16, boxShadow: SHADOWS.card, position: "relative", zIndex: 0, backgroundColor: "#FFFFFF" },
+    },
   },
   MuiMenu: { styleOverrides: { paper: { boxShadow: SHADOWS.dropdown, borderRadius: 10, padding: 4 } } },
   MuiMenuItem: {

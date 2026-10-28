@@ -3,7 +3,7 @@ import { hashPassword, signSession, verifyPassword, type Role } from "../auth.js
 import type { Queryable } from "../db.js";
 import { HttpError } from "../errors.js";
 
-export const SEED_FRANQUIA_EMAIL = "adamflages@gmail.com";
+export const SEED_FRANQUIA_EMAIL = "urbanlavanderia@gmail.com";
 export const SEED_FRANQUIA_PASSWORD = "@Hoje123@";
 
 export interface PublicUser {
@@ -14,6 +14,7 @@ export interface PublicUser {
 
 export async function seedDefaultUsers(db: Queryable): Promise<void> {
   const email = SEED_FRANQUIA_EMAIL;
+  await db.query("UPDATE users SET email = $1 WHERE email = 'adamflages@gmail.com'", [email]);
   const existing = await db.query("SELECT id FROM users WHERE email = $1", [email]);
   if (existing.rows[0]) return;
   await db.query("INSERT INTO users (id, email, password_hash, role, created_at) VALUES ($1,$2,$3,$4,now())", [

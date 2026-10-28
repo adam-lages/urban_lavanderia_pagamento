@@ -45,7 +45,7 @@ describe("navegação do dashboard", () => {
   it("mostra o menu lateral após o login", async () => {
     const user = userEvent.setup();
     renderApp("/login");
-    await user.type(screen.getByPlaceholderText("E-mail"), "adamflages@gmail.com");
+    await user.type(screen.getByPlaceholderText("E-mail"), "urbanlavanderia@gmail.com");
     await user.type(screen.getByPlaceholderText("Senha"), "@Hoje123@");
     await user.click(screen.getByRole("button", { name: "Entrar" }));
     const nav = await screen.findByRole("navigation", { name: "Menu principal" });

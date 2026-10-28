@@ -7,7 +7,7 @@ import { ThemeRegistry } from "../theme";
 
 export function renderApp(
   path = "/",
-  { token = "", role = "FRANQUIA" as Role, email = "adamflages@gmail.com" }: { token?: string; role?: Role; email?: string } = {},
+  { token = "", role = "FRANQUIA" as Role, email = "urbanlavanderia@gmail.com" }: { token?: string; role?: Role; email?: string } = {},
 ) {
   setSession(token, token ? { id: "test-user", email, role } : null);
   return render(

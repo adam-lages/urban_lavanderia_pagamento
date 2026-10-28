@@ -33,7 +33,7 @@ export const palette = {
   error: { lighter: "#FFE9D5", light: "#FFAC82", main: "#FF5630", dark: "#B71D18", darker: "#7A0916", contrastText: "#fff" },
   grey: GREY,
   text: { primary: GREY[800], secondary: GREY[600], disabled: GREY[500] },
-  background: { default: "#FFFFFF", paper: "#FFFFFF" },
+  background: { default: GREY[100], paper: "#FFFFFF" },
   divider: alpha(GREY[500], 0.2),
   action: {
     hover: alpha(GREY[500], 0.08),
