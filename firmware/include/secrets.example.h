@@ -1,10 +1,10 @@
 // Modelo sem segredos. O secrets.h real está versionado (repo privado).
 #pragma once
 
-#define WIFI_SSID "Urban_Lavanderia_Setup"
-#define WIFI_PASSWORD "COLOQUE_A_SENHA_DO_WIFI_AQUI"
+#define WIFI_SSID "urban_lavanderia_setup"
+#define WIFI_PASSWORD "@Hoje123@"
 
-#define MQTT_HOST "192.168.0.10"
+#define MQTT_HOST "10.33.253.103"
 #define MQTT_PORT 1883
 #define MQTT_USER ""
 #define MQTT_PASS ""

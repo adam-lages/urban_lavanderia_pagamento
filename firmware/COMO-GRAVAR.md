@@ -17,7 +17,7 @@ Você **não precisa** ligar a placa em nenhuma máquina de lavar para o primeir
 
 As senhas do Wi-Fi já estão no arquivo `firmware/include/secrets.h` (repositório privado):
 
-- **SSID:** `Urban_Lavanderia_Setup`
+- **SSID:** `urban_lavanderia_setup`
 - **Senha:** `@Hoje123@`
 
 Para mudar a rede:

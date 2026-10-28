@@ -60,7 +60,7 @@ mosquitto_sub -h <broker> -t 'lav/+/debug/rx' -v
 ## Credenciais (nada de senha no git)
 
 1. `include/secrets.h` já está versionado com os valores atuais (repositório privado). Edite-o se precisar mudar:
-2. Campos: `WIFI_SSID` (padrão `Urban_Lavanderia_Setup`), `WIFI_PASSWORD`, e `MQTT_HOST`/`MQTT_PORT`/`MQTT_USER`/`MQTT_PASS`.
+2. Campos: `WIFI_SSID` (padrão `Urban Lavanderia`), `WIFI_PASSWORD`, e `MQTT_HOST`/`MQTT_PORT`/`MQTT_USER`/`MQTT_PASS`.
 
 O `secrets.h` é versionado de propósito (repositório PRIVADO). Nunca torne o repositório público sem rotacionar as credenciais. Para usar TLS no MQTT, defina `MQTT_USE_TLS 1` e `MQTT_CA_CERT`.
 

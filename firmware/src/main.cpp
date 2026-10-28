@@ -47,6 +47,7 @@ static char activeId[lav::kIdCap] = "";
 
 static uint32_t wifiDownSince = 0, lastWifiTry = 0, mqttDownSince = 0, lastMqttTry = 0, lastBeat = 0, bootMs = 0;
 static bool ntpStarted = false;
+static bool wifiStarted = false;
 
 static int64_t nowEpochMs() {
   struct timeval tv;
@@ -162,9 +163,16 @@ static void serviceWifi() {
   restartIfStuck(wifiDownSince, WIFI_RESTART_AFTER_MS, "Wi-Fi");
   if (!lastWifiTry || millis() - lastWifiTry > WIFI_RETRY_MS) {
     lastWifiTry = millis() ? millis() : 1;
-    Serial.println("[wifi] conectando...");
-    WiFi.disconnect();
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    if (!wifiStarted) {
+      Serial.printf("[wifi] iniciando conexao ao SSID '%s'\n", WIFI_SSID);
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+      wifiStarted = true;
+    } else {
+      // Não interrompa a associação em andamento com disconnect() a cada retry.
+      // O ESP32 pode levar mais de WIFI_RETRY_MS para concluir a conexão.
+      Serial.printf("[wifi] ainda desconectado (status=%d); solicitando reconexao\n", WiFi.status());
+      WiFi.reconnect();
+    }
   }
 }
 

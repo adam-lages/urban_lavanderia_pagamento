@@ -8,7 +8,7 @@
 2. No terminal: `git checkout dev && git pull`.
 3. Abra a pasta `firmware/` no editor.
 4. Confira `firmware/include/secrets.h`:
-   - Wi-Fi (`WIFI_SSID`): `Urban_Lavanderia_Setup`
+   - Wi-Fi (`WIFI_SSID`): `Urban Lavanderia`
    - `MQTT_HOST`: o **IP do PC na rede** (onde roda o broker)
    - porta MQTT: `1883`
 5. Conecte a placa com um cabo USB de **DADOS** (cabo só de carga não funciona).
@@ -21,7 +21,7 @@
 
 | Item | Valor |
 | --- | --- |
-| Nome (SSID) | `Urban_Lavanderia_Setup` |
+| Nome (SSID) | `urban_lavanderia_setup` |
 | Senha | `@Hoje123@` |
 | Onde alterar | `firmware/include/secrets.h` |
 | Porta MQTT | `1883` |
@@ -105,9 +105,9 @@ O backend precisa estar acessível **na mesma rede** Wi-Fi. Na ESP32, **não use
 
 | Define | Significado | Valor atual |
 | --- | --- | --- |
-| `WIFI_SSID` | nome da rede | `Urban_Lavanderia_Setup` |
+| `WIFI_SSID` | nome da rede | `urban_lavanderia_setup` |
 | `WIFI_PASSWORD` | senha da rede | `@Hoje123@` |
-| `MQTT_HOST` | IP do computador/servidor com o Mosquitto | `192.168.0.10` |
+| `MQTT_HOST` | IP do computador/servidor com o Mosquitto | `10.33.253.103` |
 | `MQTT_PORT` | porta MQTT | `1883` |
 | `MQTT_USER` | usuário MQTT | vazio |
 | `MQTT_PASS` | senha MQTT | vazio |
@@ -143,7 +143,7 @@ LED azul onboard no GPIO **2**. Ao receber “liberar”: **3 piscadas rápidas*
 
 Monitor serial do computador: **115200**. Firmware marcado como versão `0.1.0` no `platformio.ini`.
 
-No computador, o MQTT de desenvolvimento sobe **junto com o backend** (`npm run dev:backend`), porta 1883, sem senha. A placa precisa alcançar o **IP do PC** nessa porta. O IP `192.168.0.10` em `secrets.h` só funciona se for realmente o IP atual do PC. Docker/Mosquitto é opcional. Para testar **só o dashboard**, o broker local basta — ESP32 de verdade precisa do IP na LAN.
+No computador, o MQTT de desenvolvimento sobe **junto com o backend** (`npm run dev:backend`), porta 1883, sem senha. A placa precisa alcançar o **IP do PC** nessa porta. O IP `10.33.253.103` em `secrets.h` só funciona se for realmente o IP atual do PC. Docker/Mosquitto é opcional. Para testar **só o dashboard**, o broker local basta — ESP32 de verdade precisa do IP na LAN.
 
 ## O que a máquina espera (programação do dono)
 

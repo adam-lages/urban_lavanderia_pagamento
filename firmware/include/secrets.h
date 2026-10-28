@@ -1,10 +1,10 @@
 // Versionado de propósito: repositório PRIVADO (decisão do dono). Nunca tornar público sem rotacionar.
 #pragma once
 
-#define WIFI_SSID "Urban_Lavanderia_Setup"
+#define WIFI_SSID "urban_lavanderia_setup"
 #define WIFI_PASSWORD "@Hoje123@"
 
-#define MQTT_HOST "10.33.253.240"
+#define MQTT_HOST "10.33.253.103"
 #define MQTT_PORT 1883
 #define MQTT_USER ""
 #define MQTT_PASS ""
