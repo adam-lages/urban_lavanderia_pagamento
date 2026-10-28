@@ -6,5 +6,5 @@ const target = process.env.API_URL ?? "http://localhost:3000";
 export default defineConfig({
   plugins: [react()],
   server: { port: 5173, proxy: { "/api": { target, changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, "") } } },
-  test: { environment: "jsdom" },
+  test: { environment: "jsdom", testTimeout: 15000 },
 });

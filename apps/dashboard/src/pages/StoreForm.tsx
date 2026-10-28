@@ -1,15 +1,26 @@
 import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
+import Checkbox from "@mui/material/Checkbox";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ROLES, ROLE_LABEL, type Role, type Store } from "../api";
 import { PageHeader } from "../components/PageHeader";
 import { cnpjDigits, formatCnpj } from "./stores/format";
+import { isLoginValid, StoreLoginFields } from "./stores/StoreLoginFields";
+
+const GRID = { display: "grid", gap: 3, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } } as const;
+
+function Section({ title }: { title: string }) {
+  return <Typography variant="subtitle2" sx={{ gridColumn: "1 / -1" }}>{title}</Typography>;
+}
 
 export function StoreForm() {
   const { id } = useParams();
@@ -19,12 +30,16 @@ export function StoreForm() {
   const [legalName, setLegalName] = useState("");
   const [address, setAddress] = useState("");
   const [cnpj, setCnpj] = useState("");
-  const [role, setRole] = useState<Role>("FRANQUIA");
+  const [role, setRole] = useState<Role>("FRANQUEADO");
+  const [customRole, setCustomRole] = useState(false);
   const [code, setCode] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [hasLogin, setHasLogin] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const ready = !!name.trim() && !!legalName.trim() && cnpjDigits(cnpj).length === 14 && (!isNew || !!code);
+  const ready = !!name.trim() && !!legalName.trim() && cnpjDigits(cnpj).length === 14 && (!isNew || !!code) && isLoginValid(loginEmail, loginPassword, hasLogin) && (!isNew || !!loginEmail.trim());
 
   useEffect(() => {
     if (isNew) {
@@ -46,6 +61,8 @@ export function StoreForm() {
         setCnpj(formatCnpj(s.cnpj));
         setRole(s.role);
         setCode(s.code);
+        setLoginEmail(s.loginEmail ?? "");
+        setHasLogin(!!s.loginEmail);
         setLoaded(true);
         setError("");
       })
@@ -59,7 +76,15 @@ export function StoreForm() {
     if (!ready) return;
     setSaving(true);
     try {
-      const body = { name: name.trim(), legalName: legalName.trim(), address: address.trim(), cnpj: cnpjDigits(cnpj), role };
+      const body = {
+        name: name.trim(),
+        legalName: legalName.trim(),
+        address: address.trim(),
+        cnpj: cnpjDigits(cnpj),
+        role: isNew ? role : undefined,
+        loginEmail: loginEmail.trim() || undefined,
+        loginPassword: loginPassword || undefined,
+      };
       if (isNew) {
         const created = await api<Store>("/stores", { method: "POST", body: { ...body, code } });
         navigate(`/lavanderias/${created.id}`);
@@ -87,7 +112,8 @@ export function StoreForm() {
       {loaded && (
         <Card>
           <CardContent>
-            <Stack component="form" spacing={3} onSubmit={(e) => void onSubmit(e)}>
+            <Box component="form" onSubmit={(e) => void onSubmit(e)} sx={GRID}>
+              <Section title="Dados da empresa" />
               <TextField
                 label="Razão social"
                 value={legalName}
@@ -110,26 +136,39 @@ export function StoreForm() {
                 placeholder="00.000.000/0000-00"
                 slotProps={{ htmlInput: { "aria-label": "CNPJ" } }}
               />
-              <TextField
-                select
-                label="Permissão"
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                required
-                slotProps={{ htmlInput: { "aria-label": "Permissão" } }}
-              >
-                {ROLES.map((item) => (
-                  <MenuItem key={item} value={item}>{ROLE_LABEL[item]}</MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                label="Endereço"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                multiline
-                minRows={2}
-                slotProps={{ htmlInput: { "aria-label": "Endereço" } }}
-              />
+              <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                <TextField
+                  select
+                  label="Permissão"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as Role)}
+                  required
+                  disabled={!isNew || !customRole}
+                  fullWidth
+                  helperText={isNew ? "Padrão Franqueado. Marque ao lado para alterar." : "Não pode ser alterada após o cadastro."}
+                  slotProps={{ htmlInput: { "aria-label": "Permissão" } }}
+                >
+                  {ROLES.map((item) => (
+                    <MenuItem key={item} value={item}>{ROLE_LABEL[item]}</MenuItem>
+                  ))}
+                </TextField>
+                {isNew && (
+                  <FormControlLabel
+                    sx={{ mt: 1, mr: 0, whiteSpace: "nowrap" }}
+                    control={
+                      <Checkbox
+                        checked={customRole}
+                        onChange={(_, v) => {
+                          setCustomRole(v);
+                          if (!v) setRole("FRANQUEADO");
+                        }}
+                        slotProps={{ input: { "aria-label": "Alterar permissão" } }}
+                      />
+                    }
+                    label="Alterar"
+                  />
+                )}
+              </Box>
               <TextField
                 label="Código"
                 value={code}
@@ -137,7 +176,21 @@ export function StoreForm() {
                 helperText="Gerado automaticamente. Não pode ser alterado."
                 slotProps={{ htmlInput: { "aria-label": "Código", readOnly: true } }}
               />
-              <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+              <TextField
+                label="Endereço"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                slotProps={{ htmlInput: { "aria-label": "Endereço" } }}
+              />
+              <Section title="Acesso ao sistema" />
+              <StoreLoginFields
+                email={loginEmail}
+                password={loginPassword}
+                hasLogin={hasLogin}
+                onEmail={setLoginEmail}
+                onPassword={setLoginPassword}
+              />
+              <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end", gridColumn: "1 / -1" }}>
                 <Button variant="outlined" color="inherit" onClick={() => navigate(cancelTo)}>
                   Cancelar
                 </Button>
@@ -145,7 +198,7 @@ export function StoreForm() {
                   {saving ? "Salvando…" : "Salvar"}
                 </Button>
               </Stack>
-            </Stack>
+            </Box>
           </CardContent>
         </Card>
       )}

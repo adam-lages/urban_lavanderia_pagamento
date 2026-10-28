@@ -33,14 +33,17 @@ describe("lavanderias", () => {
       method: "PATCH",
       url: `/stores/${store.id}`,
       headers: ADMIN,
-      payload: { name: "Centro Sul", legalName: "Centro Sul Lavanderia Ltda", address: "Rua B, 20", cnpj: "33.444.555/0001-81", role: "FRANQUEADO" },
+      payload: { name: "Centro Sul", legalName: "Centro Sul Lavanderia Ltda", address: "Rua B, 20", cnpj: "33.444.555/0001-81", role: "FRANQUIA" },
     });
     expect(patched.statusCode).toBe(200);
     expect(patched.json().name).toBe("Centro Sul");
     expect(patched.json().legalName).toBe("Centro Sul Lavanderia Ltda");
     expect(patched.json().address).toBe("Rua B, 20");
     expect(patched.json().cnpj).toBe("33444555000181");
-    expect(patched.json().role).toBe("FRANQUEADO");
+    expect(patched.json().role).toBe("FRANQUIA");
+
+    const roleChange = await s.app.inject({ method: "PATCH", url: `/stores/${store.id}`, headers: ADMIN, payload: { role: "FRANQUEADO" } });
+    expect(roleChange.statusCode).toBe(400);
     expect(patched.json().code).toBe(store.code);
 
     const keepCode = await s.app.inject({

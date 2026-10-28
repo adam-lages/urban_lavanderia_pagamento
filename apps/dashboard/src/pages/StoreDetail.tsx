@@ -83,12 +83,13 @@ export function StoreDetail() {
       </Tabs>
       {store && tab === "dados" && <StoreData store={store} />}
       {id && store && tab === "maquinas" && <StoreMachinesTable storeId={id} />}
-      {tab === "precos" && <StorePrices />}
+      {id && store && tab === "precos" && <StorePrices storeId={id} />}
       {confirmDelete && store && (
         <ConfirmDialog
           title="Excluir lavanderia"
           message={`Excluir "${store.name}"? Lojas com vendas não podem ser apagadas.`}
           confirmLabel="Excluir"
+          destructive
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => void remove()}
         />

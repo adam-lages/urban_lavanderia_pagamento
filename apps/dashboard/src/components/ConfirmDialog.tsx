@@ -13,6 +13,7 @@ interface Props {
   cancelLabel?: string;
   confirmIcon?: ReactNode;
   cancelIcon?: ReactNode;
+  destructive?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -24,6 +25,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancelar",
   confirmIcon,
   cancelIcon,
+  destructive = false,
   onConfirm,
   onCancel,
 }: Props) {
@@ -37,7 +39,7 @@ export function ConfirmDialog({
         <Button variant="outlined" color="inherit" startIcon={cancelIcon} onClick={onCancel}>
           {cancelLabel}
         </Button>
-        <Button variant="contained" startIcon={confirmIcon} onClick={onConfirm}>
+        <Button variant="contained" color={destructive ? "error" : "primary"} startIcon={confirmIcon} onClick={onConfirm}>
           {confirmLabel}
         </Button>
       </DialogActions>

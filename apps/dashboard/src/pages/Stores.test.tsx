@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Machine, Store } from "../api";
 import { renderApp } from "../test/render";
 
-const centro: Store = { id: "s1", name: "Centro", legalName: "Centro Lavanderia Ltda", code: "10000010", address: "Rua A, 10", cnpj: "11222333000181", role: "FRANQUIA", active: true };
+const centro: Store = { id: "s1", name: "Centro", legalName: "Centro Lavanderia Ltda", loginEmail: "centro@email.com", code: "10000010", address: "Rua A, 10", cnpj: "11222333000181", role: "FRANQUIA", active: true };
 const norte: Store = { id: "s2", name: "Norte", legalName: "Norte Lavanderia Ltda", code: "10000020", address: "Av. B, 200", cnpj: "33444555000181", role: "FRANQUEADO", active: true };
 
 const dryer: Machine = {
@@ -190,9 +190,19 @@ describe("página Lavanderias", () => {
     fireEvent.change(screen.getByLabelText("Razão social"), { target: { value: "Sul Lavanderia Ltda" } });
     await user.type(screen.getByLabelText("Nome fantasia"), "Sul");
     fireEvent.change(screen.getByLabelText("CNPJ"), { target: { value: "55666777000181" } });
+    expect(screen.getByLabelText("Permissão").textContent).toContain("Franqueado");
+    expect(screen.getByLabelText("Permissão").getAttribute("aria-disabled")).toBe("true");
+    await user.click(screen.getByRole("checkbox", { name: "Alterar permissão" }));
+    await user.click(screen.getByLabelText("Permissão"));
+    await user.click(await screen.findByRole("option", { name: "Franquia" }));
     await user.click(screen.getByLabelText("Permissão"));
     await user.click(await screen.findByRole("option", { name: "Franqueado" }));
     await user.type(screen.getByLabelText("Endereço"), "Rua C, 3");
+    expect(screen.getByRole("button", { name: "Salvar" })).toHaveProperty("disabled", true);
+    fireEvent.change(screen.getByLabelText("E-mail de acesso"), { target: { value: "sul@email.com" } });
+    fireEvent.change(screen.getByLabelText("Senha de acesso"), { target: { value: "curta" } });
+    expect(screen.getByRole("button", { name: "Salvar" })).toHaveProperty("disabled", true);
+    fireEvent.change(screen.getByLabelText("Senha de acesso"), { target: { value: "segredo123" } });
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     expect(await screen.findByRole("heading", { name: "Sul", level: 1 })).toBeTruthy();
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
@@ -204,8 +214,10 @@ describe("página Lavanderias", () => {
       code: "84729100",
       cnpj: "55666777000181",
       role: "FRANQUEADO",
+      loginEmail: "sul@email.com",
+      loginPassword: "segredo123",
     });
-  }, 15000);
+  });
 
   it("mostra as máquinas da lavanderia nos detalhes", async () => {
     const user = userEvent.setup();
@@ -249,6 +261,24 @@ describe("página Lavanderias", () => {
     expect(code).toHaveProperty("value", "10000010");
     expect(code).toHaveProperty("disabled", true);
     expect(code).toHaveProperty("readOnly", true);
+  });
+
+  it("edita mantendo a senha quando o campo fica em branco", async () => {
+    const user = userEvent.setup();
+    renderApp("/lavanderias/s1/editar", { token: "dev-admin-token" });
+    expect(await screen.findByDisplayValue("centro@email.com")).toBeTruthy();
+    expect(screen.getByLabelText("Senha de acesso")).toHaveProperty("value", "");
+    expect(screen.getByText("Deixe em branco para manter a senha atual.")).toBeTruthy();
+    expect(screen.getByLabelText("Permissão").getAttribute("aria-disabled")).toBe("true");
+    expect(screen.queryByRole("checkbox", { name: "Alterar permissão" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    await screen.findByRole("heading", { name: "Centro", level: 1 });
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const patch = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/api/stores/s1") && c[1]?.method === "PATCH");
+    const body = JSON.parse(String(patch?.[1]?.body));
+    expect(body.loginEmail).toBe("centro@email.com");
+    expect(body).not.toHaveProperty("loginPassword");
+    expect(body).not.toHaveProperty("role");
   });
 
   it("não libera máquina bloqueada ou offline", async () => {

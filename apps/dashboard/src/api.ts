@@ -11,6 +11,7 @@ export interface Store {
   cnpj: string;
   role: Role;
   active: boolean;
+  loginEmail?: string;
 }
 export interface Customer {
   id: string;
@@ -63,6 +64,22 @@ export const DEFAULT_MACHINE_MODEL: MachineModel = "LG_FH069";
 export function machineModelLabel(value: string) {
   return MACHINE_MODELS.find((m) => m.value === value)?.label ?? value;
 }
+export interface PriceSchedule {
+  startTime: string;
+  endTime: string;
+  amountCents: number;
+  weekdays: number[];
+}
+export interface MachinePricing {
+  machineId: string;
+  label: string;
+  code: string;
+  kind: Kind;
+  cycleMinutes: number;
+  priceCents: number | null;
+  schedules: PriceSchedule[];
+}
+export const WEEKDAYS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"] as const;
 export type MachineStatus = "ONLINE" | "OFFLINE" | "IN_USE";
 export interface Machine {
   id: string;

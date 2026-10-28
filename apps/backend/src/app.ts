@@ -18,9 +18,10 @@ import { ReleaseService, mapCommand } from "./services/releases.js";
 import { CustomerService } from "./services/customers.js";
 import { DEFAULT_MACHINE_MODEL, defaultCycleMinutes, MACHINE_MODELS, MAX_CYCLE_MINUTES, MachineService, mapMachine } from "./services/machines.js";
 import { OverviewService } from "./services/overview.js";
+import { PricingService } from "./services/pricing.js";
 import { SalesService } from "./services/sales.js";
 import { MACHINE_CODE, STORE_CODE, StoreService, mapStore } from "./services/stores.js";
-import { login as loginUser } from "./services/users.js";
+import { login as loginUser, MIN_PASSWORD_LENGTH } from "./services/users.js";
 
 export interface AppDeps {
   db: Db;
@@ -78,6 +79,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   const sales = new SalesService(db);
   const overview = new OverviewService(db, now);
   const machines = new MachineService(db);
+  const pricing = new PricingService(db);
 
   gateway.onAck((deviceId, ack) => {
     void boards.touch(deviceId).catch(() => undefined);
@@ -129,9 +131,12 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     cnpj: z.string().min(1).optional(),
     role: storeRole.optional(),
     active: z.boolean().optional(),
+    loginEmail: z.string().trim().email().max(120).optional(),
+    loginPassword: z.string().min(MIN_PASSWORD_LENGTH).max(72).optional(),
   });
-  app.get("/stores", requireAdmin, run(async (_req, res) => {
-    res.json(await stores.list());
+  app.get("/stores", requireAdmin, run(async (req, res) => {
+    const list = await stores.list();
+    res.json(userOf(req)?.role === "FRANQUIA" ? list : list.map((st) => ({ ...st, loginEmail: "" })));
   }));
   app.get("/stores/next-code", requireFranquia, run(async (_req, res) => {
     res.json({ code: await stores.uniqueCode() });
@@ -141,7 +146,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
       name: z.string().trim().min(1).max(80),
       legalName: z.string().trim().min(1).max(160),
       cnpj: z.string().min(1),
-      role: storeRole,
+      role: storeRole.default("FRANQUEADO"),
     }).parse(req.body);
     res.status(201).json(await stores.create(b));
   }));
@@ -310,6 +315,22 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     res.json(mapPrice(rows[0]));
   }));
 
+  const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+  const schedule = z.object({
+    startTime: hhmm,
+    endTime: hhmm,
+    amountCents: z.number().int().min(0),
+    weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+  });
+  app.get("/stores/:id/pricing", requireFranquia, run(async (req, res) => {
+    await stores.get(req.params.id);
+    res.json(await pricing.listForStore(req.params.id));
+  }));
+  app.put("/machines/:id/pricing", requireFranquia, run(async (req, res) => {
+    const b = z.object({ priceCents: z.number().int().min(0), schedules: z.array(schedule).max(20) }).parse(req.body);
+    res.json(await pricing.save(req.params.id, b));
+  }));
+
   app.get("/reports/sales", requireAdmin, run(async (req, res) => {
     const q = z
       .object({ from: z.string().optional(), to: z.string().optional(), storeId: z.string().optional() })
@@ -424,11 +445,13 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     const machines = (await db.query("SELECT * FROM machines WHERE store_id = $1 AND active = true ORDER BY label", [id])).rows;
     const prices = (await db.query("SELECT * FROM prices WHERE store_id = $1", [id])).rows;
     const priceOf = (m: any) => m.price_override_cents ?? prices.find((p) => p.kind === m.kind)?.amount_cents ?? null;
+    const schedules = await pricing.schedulesByMachine(machines.map((m) => m.id));
     res.json({
       store: mapStore(store),
       paymentProviders: providers.names(),
       machines: machines.map((m) => ({
         id: m.id, kind: m.kind, label: m.label, priceCents: priceOf(m), online: gateway.isOnline(m.device_id),
+        promotions: schedules.get(m.id) ?? [],
       })),
     });
   }));

@@ -38,3 +38,44 @@ export async function login(
   const user: PublicUser = { id: row.id, email: row.email, role: row.role };
   return { token: signSession(secret, user), user };
 }
+
+export const MIN_PASSWORD_LENGTH = 8;
+
+export interface StoreLogin {
+  email?: string;
+  password?: string;
+}
+
+export async function assertStoreLoginValid(db: Queryable, login: StoreLogin, storeId?: string): Promise<void> {
+  const email = login.email?.trim().toLowerCase();
+  const cur = storeId ? (await db.query("SELECT id FROM users WHERE store_id = $1", [storeId])).rows[0] : undefined;
+  if (email) {
+    const taken = (await db.query("SELECT id FROM users WHERE email = $1", [email])).rows[0];
+    if (taken && taken.id !== cur?.id) throw new HttpError(409, "Este e-mail já é usado por outro acesso", "conflict");
+    if (!cur && !login.password) throw new HttpError(400, "Informe a senha de acesso", "login_password_required");
+  } else if (login.password && !cur) {
+    throw new HttpError(400, "Informe o e-mail de acesso", "login_email_required");
+  }
+}
+
+export async function saveStoreLogin(db: Queryable, storeId: string, role: Role, login: StoreLogin): Promise<void> {
+  const cur = (await db.query("SELECT id, email FROM users WHERE store_id = $1", [storeId])).rows[0];
+  const email = login.email?.trim().toLowerCase() || cur?.email;
+  if (!email) {
+    if (login.password) throw new HttpError(400, "Informe o e-mail de acesso", "login_email_required");
+    return;
+  }
+  const taken = (await db.query("SELECT id FROM users WHERE email = $1", [email])).rows[0];
+  if (taken && taken.id !== cur?.id) throw new HttpError(409, "Este e-mail já é usado por outro acesso", "conflict");
+  if (!cur) {
+    if (!login.password) throw new HttpError(400, "Informe a senha de acesso", "login_password_required");
+    await db.query("INSERT INTO users (id, email, password_hash, role, store_id, created_at) VALUES ($1,$2,$3,$4,$5,now())", [
+      randomUUID(), email, await hashPassword(login.password), role, storeId,
+    ]);
+    return;
+  }
+  const hash = login.password ? await hashPassword(login.password) : null;
+  await db.query("UPDATE users SET email = $2, role = $3, password_hash = COALESCE($4, password_hash) WHERE id = $1", [
+    cur.id, email, role, hash,
+  ]);
+}

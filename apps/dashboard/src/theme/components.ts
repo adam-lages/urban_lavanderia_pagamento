@@ -24,7 +24,13 @@ export const components: Components<Theme> = {
       sizeLarge: { height: 48, padding: "8px 16px", fontSize: 15 },
     },
   },
-  MuiIconButton: { styleOverrides: { root: { color: GREY[600] } } },
+  MuiIconButton: {
+    styleOverrides: {
+      root: ({ ownerState }: { ownerState: { color?: string } }) => ({
+        ...((!ownerState.color || ownerState.color === "default") && { color: GREY[600] }),
+      }),
+    },
+  },
   MuiTextField: { defaultProps: { fullWidth: true } },
   MuiInputLabel: {
     styleOverrides: {
