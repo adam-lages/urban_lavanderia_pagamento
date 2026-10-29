@@ -9,6 +9,7 @@ import { Outlet } from "react-router-dom";
 import { DRAWER_WIDTH, HEADER_HEIGHT } from "../theme";
 import { AccountMenu } from "./AccountMenu";
 import { Sidebar } from "./Sidebar";
+import { ThemeModeMenu } from "./ThemeModeMenu";
 
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -31,6 +32,7 @@ export function AppLayout() {
             <MenuRounded />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
+          <ThemeModeMenu />
           <AccountMenu />
         </Toolbar>
       </AppBar>
