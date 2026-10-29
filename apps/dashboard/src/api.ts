@@ -113,8 +113,11 @@ export interface Sale {
   customerName: string;
   customerCpf: string;
   machineLabel: string;
+  machineKind: Kind;
+  servicesCount: number;
   paidAt: string;
   amountCents: number;
+  paidCents: number;
   paymentMethod: PayMethod | null;
   couponCode: string;
   voucherCode: string;

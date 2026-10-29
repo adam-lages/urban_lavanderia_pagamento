@@ -16,6 +16,7 @@ import { countByRole, StoreRoleTabs, storesOfRole, type StoreFilter } from "../c
 import { TableLoading } from "../components/TableLoading";
 import { useStores } from "../hooks";
 import { SaleDetails } from "./sales/SaleDetails";
+import { SaleReceipt } from "./sales/SaleReceipt";
 import { SaleRow } from "./sales/SaleRow";
 import { SalesToolbar } from "./sales/SalesToolbar";
 
@@ -34,6 +35,7 @@ export function Sales() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Sale | null>(null);
+  const [receipt, setReceipt] = useState<Sale | null>(null);
 
   const counts = useMemo(() => countByRole(stores), [stores]);
   const roleStores = useMemo(() => storesOfRole(stores, role), [stores, role]);
@@ -103,6 +105,7 @@ export function Sales() {
                 <TableCell>Cliente</TableCell>
                 <TableCell>Data da compra</TableCell>
                 <TableCell>Máquina</TableCell>
+                <TableCell align="center">Qtd. serviços</TableCell>
                 <TableCell>Valor pago</TableCell>
                 <TableCell>Método</TableCell>
                 <TableCell>Cupom</TableCell>
@@ -111,7 +114,7 @@ export function Sales() {
             </TableHead>
             <TableBody>
               {items.map((s) => (
-                <SaleRow key={s.id} sale={s} onDetails={() => setSelected(s)} />
+                <SaleRow key={s.id} sale={s} onDetails={() => setSelected(s)} onReceipt={() => setReceipt(s)} />
               ))}
             </TableBody>
           </Table>
@@ -138,6 +141,7 @@ export function Sales() {
         />
       </Card>
       <SaleDetails sale={selected} onClose={() => setSelected(null)} />
+      <SaleReceipt sale={receipt} store={stores.find((st) => st.id === receipt?.storeId)} onClose={() => setReceipt(null)} />
     </>
   );
 }

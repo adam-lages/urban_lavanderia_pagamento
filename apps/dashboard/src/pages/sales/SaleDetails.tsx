@@ -26,7 +26,7 @@ export function SaleDetails({ sale, onClose }: { sale: Sale | null; onClose: () 
           <Field label="CPF" value={sale.customerCpf ? formatCpf(sale.customerCpf) : "—"} />
           <Field label="Máquina" value={dash(sale.machineLabel)} />
           <Field label="Data da compra" value={when.time ? `${when.date} ${when.time}` : when.date} />
-          <Field label="Valor pago" value={brl(sale.amountCents)} />
+          <Field label="Valor pago" value={brl(sale.paidCents)} />
           <Field label="Método" value={paymentMethodLabel(sale.paymentMethod)} />
           <Field label="Cupom" value={dash(sale.couponCode)} />
           <Field label="Voucher" value={dash(sale.voucherCode)} />

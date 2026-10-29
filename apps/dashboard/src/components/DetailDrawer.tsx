@@ -13,11 +13,13 @@ export function DetailDrawer({
   open,
   onClose,
   children,
+  footer,
 }: {
   title: string;
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  footer?: ReactNode;
 }) {
   return (
     <Drawer
@@ -31,6 +33,8 @@ export function DetailDrawer({
             boxSizing: "border-box",
             borderRight: "none",
             borderLeft: `1px dashed ${alpha(GREY[500], 0.24)}`,
+            display: "flex",
+            flexDirection: "column",
           },
         },
       }}
@@ -42,7 +46,13 @@ export function DetailDrawer({
         </IconButton>
       </Box>
       <Divider />
-      <Box sx={{ p: 3 }}>{children}</Box>
+      <Box sx={{ p: 3, flexGrow: 1, overflowY: "auto" }}>{children}</Box>
+      {footer && (
+        <>
+          <Divider />
+          <Box sx={{ p: 2.5, display: "flex", justifyContent: "flex-end", gap: 1 }}>{footer}</Box>
+        </>
+      )}
     </Drawer>
   );
 }

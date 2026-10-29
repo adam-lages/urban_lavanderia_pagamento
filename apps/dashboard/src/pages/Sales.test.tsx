@@ -15,8 +15,11 @@ const anaPix: Sale = {
   customerName: "Ana Souza",
   customerCpf: "52998224725",
   machineLabel: "Lavadora 1",
+  machineKind: "WASHER",
+  servicesCount: 1,
   paidAt: "2026-09-02T13:10:00.000Z",
   amountCents: 1800,
+  paidCents: 1800,
   paymentMethod: "PIX",
   couponCode: "",
   voucherCode: "",
@@ -36,6 +39,15 @@ const brunoCard: Sale = {
   authCode: "A1B2C3",
   cardBrand: "Mastercard",
   cardNumber: "**** 4412",
+};
+const brunoDryer: Sale = {
+  ...brunoCard,
+  id: "sale-2b",
+  machineLabel: "Secadora 3",
+  machineKind: "DRYER",
+  amountCents: 1200,
+  paidCents: 3000,
+  servicesCount: 2,
 };
 const fabio: Sale = {
   ...anaPix,
@@ -60,15 +72,16 @@ function json(data: unknown, status = 200) {
 }
 
 beforeEach(() => {
-  sales = [anaPix, brunoCard, fabio];
+  sales = [anaPix, { ...brunoCard, servicesCount: 2, paidCents: 3000 }, fabio];
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const parsed = new URL(String(input), "http://local.test");
     if (parsed.pathname === "/api/stores") return json([maranguape, algarve]);
     if (parsed.pathname === "/api/sales") {
       const storeId = parsed.searchParams.get("storeId") ?? "";
       const name = (parsed.searchParams.get("customerName") ?? "").toLowerCase();
+      const orderId = parsed.searchParams.get("orderId") ?? "";
       const filtered = sales.filter((s) =>
-        (!storeId || s.storeId === storeId) && (!name || s.customerName.toLowerCase().includes(name)),
+        (!storeId || s.storeId === storeId) && (!name || s.customerName.toLowerCase().includes(name)) && (!orderId || s.orderId === orderId),
       );
       return json({ items: filtered, total: filtered.length });
     }
@@ -145,6 +158,55 @@ describe("página Vendas", () => {
     expect(screen.getByText("**** 4412")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Fechar detalhes" }));
     await waitFor(() => expect(screen.queryByRole("heading", { name: "Detalhes da venda" })).toBeNull());
+  });
+
+  it("mostra o extrato com dados da lavanderia e do cliente e baixa ao salvar", async () => {
+    const user = userEvent.setup();
+    const click = vi.fn();
+    const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:comprovante");
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const orig = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = click;
+    sales.push(brunoDryer);
+    renderApp("/vendas", { token: "dev-admin-token" });
+    await searchStore(user, "Maranguape 1");
+    await screen.findAllByText("Bruno Lima");
+    expect(screen.getByRole("columnheader", { name: "Qtd. serviços" })).toBeTruthy();
+    expect(screen.getAllByRole("cell", { name: "2" })).toHaveLength(2);
+    await user.click(screen.getAllByRole("button", { name: "Extrato da venda de Bruno Lima" })[0]);
+    expect(await screen.findByRole("heading", { name: "Extrato" })).toBeTruthy();
+    const receipt = await screen.findByLabelText("Comprovante");
+    expect(receipt.textContent).toContain("Maranguape 1");
+    expect(receipt.textContent).toContain("CNPJ: 11.222.333/0001-81");
+    expect(receipt.textContent).toContain("Data e hora");
+    expect(receipt.textContent).toContain("Rua A");
+    expect(receipt.textContent).toContain("Bruno Lima");
+    expect(receipt.textContent).toContain("390.533.447-05");
+    expect(receipt.textContent).toContain("Lavar - Lavadora 2");
+    expect(receipt.textContent).toContain("Secar - Secadora 3");
+    expect(receipt.textContent).not.toContain("Fábio Nunes");
+    expect(receipt.textContent).toContain("Crédito");
+    expect(receipt.textContent).toMatch(/Desconto:\s+Cupom LAVA10/);
+    expect(receipt.querySelector("strong")?.textContent).toMatch(/^Total:\s+R\$\s30,00$/);
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(click).toHaveBeenCalled();
+    expect(create).toHaveBeenCalled();
+    HTMLAnchorElement.prototype.click = orig;
+    create.mockRestore();
+    revoke.mockRestore();
+  });
+
+  it("fecha o extrato ao cancelar sem baixar", async () => {
+    const user = userEvent.setup();
+    const create = vi.spyOn(URL, "createObjectURL");
+    renderApp("/vendas", { token: "dev-admin-token" });
+    await searchStore(user, "Maranguape 1");
+    await screen.findByText("Ana Souza");
+    await user.click(screen.getByRole("button", { name: "Extrato da venda de Ana Souza" }));
+    await user.click(await screen.findByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Extrato" })).toBeNull());
+    expect(create).not.toHaveBeenCalled();
+    create.mockRestore();
   });
 
   it("filtra por lavanderia e por nome só ao pesquisar", async () => {

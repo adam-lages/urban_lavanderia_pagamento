@@ -19,6 +19,7 @@ describe("vendas", () => {
     expect(all.total).toBeGreaterThan(300);
     expect(all.items).toHaveLength(5);
     expect(all.items[0].machineLabel).toBeTruthy();
+    expect(all.items[0].servicesCount).toBeGreaterThanOrEqual(1);
 
     const store = await sales("storeId=loja-algarve&limit=100");
     expect(store.total).toBeGreaterThan(0);
@@ -30,6 +31,14 @@ describe("vendas", () => {
 
     const byId = await sales("customerId=cli-ana&limit=100");
     expect(byId.total).toBe(byName.total);
+  });
+
+  it("filtra pelo pagamento e traz todos os serviços com o valor pago", async () => {
+    const multi = (await sales("limit=100")).items.find((i: { servicesCount: number }) => i.servicesCount > 1);
+    const order = await sales(`orderId=${multi.orderId}&limit=100`);
+    expect(order.items).toHaveLength(multi.servicesCount);
+    const sum = order.items.reduce((t: number, i: { amountCents: number }) => t + i.amountCents, 0);
+    expect(order.items.every((i: { paidCents: number }) => i.paidCents === sum)).toBe(true);
   });
 
   it("recusa quem não é admin", async () => {

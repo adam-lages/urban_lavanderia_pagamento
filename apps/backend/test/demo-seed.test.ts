@@ -92,4 +92,13 @@ describe("dados de demonstração", () => {
     }
     expect([...sums.values()].every((v) => v.total === v.sum)).toBe(true);
   });
+
+  it("valor pago é o preço unitário vezes a quantidade de serviços", async () => {
+    const orders = await rows(
+      "SELECT o.coupon_code, p.amount_cents, COUNT(oi.id) AS n FROM orders o JOIN payments p ON p.order_id = o.id JOIN order_items oi ON oi.order_id = o.id GROUP BY o.id, o.coupon_code, p.amount_cents",
+    );
+    const noCoupon = orders.filter((o) => !o.coupon_code);
+    expect(noCoupon.every((o) => o.amount_cents === 1690 * Number(o.n))).toBe(true);
+    expect(new Set(orders.map((o) => Number(o.n)))).toEqual(new Set([1, 2, 3, 4]));
+  });
 });

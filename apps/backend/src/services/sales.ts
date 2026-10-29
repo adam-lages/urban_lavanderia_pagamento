@@ -10,8 +10,11 @@ export interface Sale {
   customerName: string;
   customerCpf: string;
   machineLabel: string;
+  machineKind: "WASHER" | "DRYER";
+  servicesCount: number;
   paidAt: string;
   amountCents: number;
+  paidCents: number;
   paymentMethod: PayMethod | null;
   couponCode: string;
   voucherCode: string;
@@ -34,8 +37,11 @@ export function mapSale(r: any): Sale {
     customerName: r.customer_name ?? "",
     customerCpf: r.customer_cpf ?? "",
     machineLabel: r.machine_label,
+    machineKind: r.machine_kind,
+    servicesCount: Number(r.services_count ?? 1),
     paidAt: iso(r.paid_at),
     amountCents: Number(r.price_cents),
+    paidCents: Number(r.total_cents ?? r.price_cents),
     paymentMethod: (r.method as PayMethod | null) ?? null,
     couponCode: r.coupon_code ?? "",
     voucherCode: r.voucher_code ?? "",
@@ -50,17 +56,23 @@ const FROM = `FROM order_items oi
   JOIN stores s ON s.id = o.store_id
   JOIN machines m ON m.id = oi.machine_id
   LEFT JOIN customers c ON c.id = o.customer_id
-  LEFT JOIN payments p ON p.order_id = o.id AND p.status = 'APPROVED'`;
+  LEFT JOIN payments p ON p.order_id = o.id AND p.status = 'APPROVED'
+  LEFT JOIN (SELECT order_id, COUNT(*) AS n FROM order_items GROUP BY order_id) qty ON qty.order_id = o.id`;
 
 export class SalesService {
   constructor(private db: Db) {}
 
-  async list(input: { storeId?: string; customerName?: string; customerId?: string; page: number; limit: number }) {
+  async list(input: { storeId?: string; customerName?: string; customerId?: string; orderId?: string; page: number; limit: number }) {
     const storeId = input.storeId?.trim() || "";
     const name = input.customerName?.trim() || "";
     const customerId = input.customerId?.trim() || "";
+    const orderId = input.orderId?.trim() || "";
     const where = ["o.status = 'PAID'"];
     const params: unknown[] = [];
+    if (orderId) {
+      params.push(orderId);
+      where.push(`o.id = $${params.length}`);
+    }
     if (storeId) {
       params.push(storeId);
       where.push(`o.store_id = $${params.length}`);
@@ -76,11 +88,12 @@ export class SalesService {
     const total = Number((await this.db.query(`SELECT COUNT(*) AS n ${FROM} ${clause}`, params)).rows[0]?.n ?? 0);
     params.push(input.limit, input.page * input.limit);
     const { rows } = await this.db.query(
-      `SELECT oi.id, o.id AS order_id, o.store_id, s.name AS store_name, o.paid_at, oi.price_cents,
-              m.label AS machine_label, c.name AS customer_name, c.cpf AS customer_cpf,
-              o.coupon_code, o.voucher_code, p.method, p.auth_code, p.card_brand, p.card_number
+      `SELECT oi.id, o.id AS order_id, o.store_id, s.name AS store_name, o.paid_at, oi.price_cents, o.total_cents,
+              m.label AS machine_label, m.kind AS machine_kind, c.name AS customer_name, c.cpf AS customer_cpf,
+              o.coupon_code, o.voucher_code, p.method, p.auth_code, p.card_brand, p.card_number,
+              qty.n AS services_count
        ${FROM} ${clause}
-       ORDER BY o.paid_at DESC
+       ORDER BY o.paid_at DESC, oi.id
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
     );

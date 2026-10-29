@@ -197,6 +197,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
       storeId: z.string().optional(),
       customerName: z.string().optional(),
       customerId: z.string().optional(),
+      orderId: z.string().optional(),
       page: z.coerce.number().int().min(0).default(0),
       limit: z.coerce.number().int().min(1).max(100).default(10),
     }).parse(req.query);

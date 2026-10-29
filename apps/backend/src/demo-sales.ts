@@ -55,9 +55,15 @@ export async function seedSalesIfEmpty(db: Queryable, now: Date = new Date()): P
   let n = 0;
 
   const sell = async (customerId: string, storeId: string, at: Date) => {
-    const kinds = weighted(rand, [[["WASHER"], 55], [["DRYER"], 15], [["WASHER", "DRYER"], 30]] as const);
-    const items = kinds.map((k) => ({ kind: k, machine: pick(rand, machines.filter((m) => m.store_id === storeId && m.kind === k)) }));
-    if (items.some((i) => !i.machine)) return;
+    const pool = machines.filter((m) => m.store_id === storeId);
+    const quantity = Math.min(pool.length, weighted(rand, [[1, 45], [2, 30], [3, 15], [4, 10]] as const));
+    if (!quantity) return;
+    const chosen: Row[] = [];
+    while (chosen.length < quantity) {
+      const m = pick(rand, pool.filter((p) => !chosen.includes(p)))!;
+      chosen.push(m);
+    }
+    const items = chosen.map((m) => ({ kind: m.kind, machine: m }));
     const coupon = rand() < 0.4 ? pick(rand, COUPONS) : null;
     const method = weighted(rand, [["PIX", 40], ["CREDIT", 30], ["DEBIT", 22], ["VOUCHER", 8]] as const);
     const card = method === "CREDIT" || method === "DEBIT";

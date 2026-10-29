@@ -18,7 +18,7 @@ export function PurchaseRow({ sale: s, onDetails }: { sale: Sale; onDetails: () 
         ) : "—"}
       </TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>{s.machineLabel}</TableCell>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>{brl(s.amountCents)}</TableCell>
+      <TableCell sx={{ whiteSpace: "nowrap" }}>{brl(s.paidCents)}</TableCell>
       <TableCell>{paymentMethodLabel(s.paymentMethod)}</TableCell>
       <TableCell>{dash(s.couponCode)}</TableCell>
       <TableCell align="right">
