@@ -8,13 +8,12 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams} from "react-router-dom";
-import { api, DEFAULT_MACHINE_MODEL, MACHINE_MODELS, type Board, type Kind, type Machine, type MachineModel } from "../api";
+import { api, channelBounds, DEFAULT_MACHINE_MODEL, defaultChannel, MACHINE_MODELS, type Board, type Kind, type Machine, type MachineModel } from "../api";
 import { PageHeader } from "../components/PageHeader";
 import { useStores } from "../hooks";
 import { DefaultableField } from "./machines/DefaultableField";
 import { storeMachinesPath } from "./stores/paths";
 
-const DEFAULT_CHANNEL = "100";
 const MAX_CYCLE_MINUTES = 240;
 
 function defaultCycleMinutes(kind: Kind) {
@@ -37,7 +36,7 @@ export function MachineForm() {
   const [label, setLabel] = useState("");
   const [code, setCode] = useState("");
   const [deviceId, setDeviceId] = useState("");
-  const [channel, setChannel] = useState(DEFAULT_CHANNEL);
+  const [channel, setChannel] = useState(defaultChannel(DEFAULT_MACHINE_MODEL));
   const [customChannel, setCustomChannel] = useState(false);
   const [cycle, setCycle] = useState(defaultCycleMinutes("WASHER"));
   const [customCycle, setCustomCycle] = useState(false);
@@ -84,7 +83,7 @@ export function MachineForm() {
         setCode(m.code);
         setDeviceId(m.deviceId);
         setChannel(String(m.channel));
-        setCustomChannel(String(m.channel) !== DEFAULT_CHANNEL);
+        setCustomChannel(String(m.channel) !== defaultChannel(m.model ?? DEFAULT_MACHINE_MODEL));
         setCycle(String(m.cycleMinutes));
         setCustomCycle(String(m.cycleMinutes) !== defaultCycleMinutes(m.kind));
         setLoaded(true);
@@ -107,7 +106,7 @@ export function MachineForm() {
         label: label.trim(),
         code: isNew ? code : undefined,
         deviceId: deviceId.trim() || "",
-        channel: Number(channel),
+        channel: Number(customChannel ? channel : defaultChannel(model)),
         cycleMinutes: Number(customCycle ? cycle : defaultCycle),
       };
       if (isNew) {
@@ -133,7 +132,10 @@ export function MachineForm() {
   }, [boards, linkedIds, deviceId]);
 
   const cycleOk = !customCycle || (Number(cycle) >= 1 && Number(cycle) <= MAX_CYCLE_MINUTES);
-  const canSave = Boolean(storeId && label.trim() && cycleOk && Number(channel) >= 100 && (!isNew || code));
+  const bounds = channelBounds(model);
+  const channelValue = Number(customChannel ? channel : defaultChannel(model));
+  const channelOk = Number.isInteger(channelValue) && channelValue >= bounds.min && channelValue <= bounds.max;
+  const canSave = Boolean(storeId && label.trim() && cycleOk && channelOk && (!isNew || code));
 
   return (
     <>
@@ -178,7 +180,12 @@ export function MachineForm() {
                   select
                   label="Maquinário"
                   value={model}
-                  onChange={(e) => setModel(e.target.value as MachineModel)}
+                  onChange={(e) => {
+                    const next = e.target.value as MachineModel;
+                    setModel(next);
+                    setChannel(defaultChannel(next));
+                    setCustomChannel(false);
+                  }}
                   helperText="Modelo das máquinas usadas na lavanderia."
                   slotProps={{ htmlInput: { "aria-label": "Maquinário" } }}
                 >
@@ -217,10 +224,10 @@ export function MachineForm() {
                 <DefaultableField
                   label="Canal"
                   value={channel}
-                  defaultValue={DEFAULT_CHANNEL}
+                  defaultValue={defaultChannel(model)}
                   custom={customChannel}
                   maxDigits={4}
-                  helperText="Padrão 100. Marque ao lado para alterar."
+                  helperText={`Padrão ${defaultChannel(model)}. Marque ao lado para alterar.`}
                   onChange={setChannel}
                   onCustom={setCustomChannel}
                 />

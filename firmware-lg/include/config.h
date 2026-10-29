@@ -4,7 +4,7 @@
 #if __has_include("secrets.h")
 #include "secrets.h"
 #else
-#error "Crie firmware/include/secrets.h a partir de secrets.example.h"
+#error "Crie firmware-lg/include/secrets.h a partir de secrets.example.h"
 #endif
 
 #ifndef RELEASE_DRIVER

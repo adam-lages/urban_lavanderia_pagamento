@@ -97,10 +97,25 @@ describe("máquinas", () => {
       method: "POST",
       url: "/machines",
       headers: ADMIN,
-      payload: { storeId: store.id, kind: "WASHER", label: "Lavadora 9", channel: 100, model: "SPEED_QUEEN" },
+      payload: { storeId: store.id, kind: "WASHER", label: "Lavadora 9", channel: 1, model: "SPEED_QUEEN" },
     })).json();
     expect(created.model).toBe("SPEED_QUEEN");
-    const patched = await s.app.inject({ method: "PATCH", url: `/machines/${created.id}`, headers: ADMIN, payload: { model: "MAMUTE" } });
+    expect(created.channel).toBe(1);
+    const lgPulse = await s.app.inject({
+      method: "POST",
+      url: "/machines",
+      headers: ADMIN,
+      payload: { storeId: store.id, kind: "WASHER", label: "Lavadora 10", channel: 1 },
+    });
+    expect(lgPulse.statusCode).toBe(400);
+    const sqPulse = await s.app.inject({
+      method: "POST",
+      url: "/machines",
+      headers: ADMIN,
+      payload: { storeId: store.id, kind: "WASHER", label: "Lavadora 11", channel: 100, model: "SPEED_QUEEN" },
+    });
+    expect(sqPulse.statusCode).toBe(400);
+    const patched = await s.app.inject({ method: "PATCH", url: `/machines/${created.id}`, headers: ADMIN, payload: { model: "MAMUTE", channel: 100 } });
     expect(patched.json().model).toBe("MAMUTE");
     const invalid = await s.app.inject({ method: "PATCH", url: `/machines/${created.id}`, headers: ADMIN, payload: { model: "XYZ" } });
     expect(invalid.statusCode).toBe(400);

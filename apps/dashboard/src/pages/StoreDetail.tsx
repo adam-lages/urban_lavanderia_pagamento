@@ -2,6 +2,7 @@ import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import EditOutlined from "@mui/icons-material/EditOutlined";
 import InfoOutlined from "@mui/icons-material/InfoOutlined";
 import LocalLaundryServiceOutlined from "@mui/icons-material/LocalLaundryServiceOutlined";
+import LocalOfferOutlined from "@mui/icons-material/LocalOfferOutlined";
 import PaymentsOutlined from "@mui/icons-material/PaymentsOutlined";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
@@ -17,8 +18,9 @@ import { PageHeader } from "../components/PageHeader";
 import { StoreData } from "./stores/StoreData";
 import { StoreMachinesTable } from "./stores/StoreMachinesTable";
 import { StorePrices } from "./stores/StorePrices";
+import { StorePromotions } from "./stores/StorePromotions";
 
-type StoreTab = "dados" | "maquinas" | "precos";
+type StoreTab = "dados" | "maquinas" | "precos" | "promocao";
 
 export function StoreDetail() {
   const { id } = useParams();
@@ -80,10 +82,12 @@ export function StoreDetail() {
         <Tab value="dados" icon={<InfoOutlined fontSize="small" />} iconPosition="start" label="Dados" sx={{ gap: 1 }} />
         <Tab value="maquinas" icon={<LocalLaundryServiceOutlined fontSize="small" />} iconPosition="start" label="Máquinas" sx={{ gap: 1 }} />
         <Tab value="precos" icon={<PaymentsOutlined fontSize="small" />} iconPosition="start" label="Preços" sx={{ gap: 1 }} />
+        <Tab value="promocao" icon={<LocalOfferOutlined fontSize="small" />} iconPosition="start" label="Promoção" sx={{ gap: 1 }} />
       </Tabs>
       {store && tab === "dados" && <StoreData store={store} />}
       {id && store && tab === "maquinas" && <StoreMachinesTable storeId={id} />}
       {id && store && tab === "precos" && <StorePrices storeId={id} />}
+      {id && store && tab === "promocao" && <StorePromotions storeId={id} />}
       {confirmDelete && store && (
         <ConfirmDialog
           title="Excluir lavanderia"

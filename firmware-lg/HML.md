@@ -6,8 +6,8 @@
 
 1. Instale o VS Code (ou Cursor) e a extensão **PlatformIO IDE**.
 2. No terminal: `git checkout dev && git pull`.
-3. Abra a pasta `firmware/` no editor.
-4. Confira `firmware/include/secrets.h`:
+3. Abra a pasta `firmware-lg/` no editor.
+4. Confira `firmware-lg/include/secrets.h`:
    - Wi-Fi (`WIFI_SSID`): `Urban Lavanderia`
    - `MQTT_HOST`: o **IP do PC na rede** (onde roda o broker)
    - porta MQTT: `1883`
@@ -23,7 +23,7 @@
 | --- | --- |
 | Nome (SSID) | `urban_lavanderia_setup` |
 | Senha | `@Hoje123@` |
-| Onde alterar | `firmware/include/secrets.h` |
+| Onde alterar | `firmware-lg/include/secrets.h` |
 | Porta MQTT | `1883` |
 | `MQTT_HOST` | **IP do PC na rede** (onde roda o broker), não `localhost` |
 
@@ -66,11 +66,11 @@ Para testar o **contrato** sem placa: na raiz do repo, `npm run dev:simulator` (
 ### Passos curtos (PlatformIO, modo mock = só o LED)
 
 1. Leia os avisos de 220 V em `COMO-GRAVAR.md` e no `README.md` desta pasta. Primeiro teste: **só USB**, sem fio na máquina.
-2. Confira Wi-Fi e MQTT em `firmware/include/secrets.h` (`WIFI_SSID`, `WIFI_PASSWORD`, `MQTT_HOST` = IP do PC, porta **1883**).
+2. Confira Wi-Fi e MQTT em `firmware-lg/include/secrets.h` (`WIFI_SSID`, `WIFI_PASSWORD`, `MQTT_HOST` = IP do PC, porta **1883**).
 3. Grave o mock:
 
 ```bash
-cd firmware
+cd firmware-lg
 pio run -e esp32doit-mock -t upload
 pio device monitor
 ```

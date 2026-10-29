@@ -1,3 +1,4 @@
+import { channelBounds } from "@lav/protocol";
 import type { Db } from "../db.js";
 import { HttpError } from "../errors.js";
 import { randomDigitCode } from "./stores.js";
@@ -43,6 +44,13 @@ export const MAX_CYCLE_MINUTES = 240;
 
 export function defaultCycleMinutes(kind: string) {
   return kind === "DRYER" ? 45 : 30;
+}
+
+export function assertChannelForModel(model: string, channel: number) {
+  const { min, max } = channelBounds(model);
+  if (!Number.isInteger(channel) || channel < min || channel > max) {
+    throw new HttpError(400, `Canal inválido para este maquinário (${min}–${max})`, "invalid_channel");
+  }
 }
 
 export function mapMachine(r: any, online = false, inUse = false, lastReleasedAt = "") {

@@ -71,7 +71,7 @@ O `secrets.h` é versionado de propósito (repositório PRIVADO). Nunca torne o 
 3. Conecte a ESP32 por USB (se não aparecer, instale o driver CP2102/CH340 e adicione seu usuário ao grupo `dialout` no Linux).
 4. Grave começando pelo mock:
    ```bash
-   cd firmware
+   cd firmware-lg
    pio run -e esp32doit-mock -t upload
    pio device monitor
    ```
@@ -93,7 +93,7 @@ O `secrets.h` é versionado de propósito (repositório PRIVADO). Nunca torne o 
 ## Testes
 
 ```bash
-cd firmware
+cd firmware-lg
 pio test -e native                                   # lógica no PC
 pio run -e esp32doit-mock -e esp32doit-gpio -e esp32doit-serial   # compila os 3 drivers
 ```

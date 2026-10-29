@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS machines (
   store_id text NOT NULL REFERENCES stores(id),
   kind text NOT NULL CHECK (kind IN ('WASHER','DRYER')),
   label text NOT NULL,
-  channel integer NOT NULL CHECK (channel BETWEEN 100 AND 1000),
+  channel integer NOT NULL CHECK (channel BETWEEN 1 AND 1000),
   device_id text NOT NULL,
   price_override_cents integer CHECK (price_override_cents IS NULL OR price_override_cents >= 0),
   active boolean NOT NULL DEFAULT true,

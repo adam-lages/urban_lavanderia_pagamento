@@ -2,6 +2,22 @@
 
 export const MIN_CHANNEL = 100;
 export const MAX_CHANNEL = 1000;
+export const ALLIANCE_MIN_CHANNEL = 1;
+export const ALLIANCE_MAX_CHANNEL = 32;
+
+export function isAlliancePulseModel(model: string) {
+  return model === "SPEED_QUEEN" || model === "SPEED_QUEEN_200MS";
+}
+
+export function defaultChannel(model: string) {
+  return isAlliancePulseModel(model) ? ALLIANCE_MIN_CHANNEL : MIN_CHANNEL;
+}
+
+export function channelBounds(model: string) {
+  return isAlliancePulseModel(model)
+    ? { min: ALLIANCE_MIN_CHANNEL, max: ALLIANCE_MAX_CHANNEL }
+    : { min: MIN_CHANNEL, max: MAX_CHANNEL };
+}
 
 export const topics = {
   /** backend -> placa */

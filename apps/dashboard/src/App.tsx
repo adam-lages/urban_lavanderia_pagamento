@@ -8,9 +8,14 @@ import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { MachineDetail } from "./pages/MachineDetail";
 import { MachineForm } from "./pages/MachineForm";
-import { Placeholder } from "./pages/Placeholder";
+import { CouponDetail } from "./pages/CouponDetail";
+import { CouponForm } from "./pages/CouponForm";
+import { Coupons } from "./pages/Coupons";
 import { Sales } from "./pages/Sales";
 import { StoreDetail } from "./pages/StoreDetail";
+import { VoucherDetail } from "./pages/VoucherDetail";
+import { VoucherForm } from "./pages/VoucherForm";
+import { Wallet } from "./pages/Wallet";
 import { StoreForm } from "./pages/StoreForm";
 import { Stores } from "./pages/Stores";
 
@@ -50,8 +55,15 @@ export function App() {
           <Route path="/lavanderias/:storeId/maquinas/nova" element={<MachineForm />} />
           <Route path="/lavanderias/:storeId/maquinas/:machineId/editar" element={<MachineForm />} />
           <Route path="/lavanderias/:storeId/maquinas/:machineId" element={<MachineDetail />} />
+          <Route path="/cupons/novo" element={<CouponForm />} />
+          <Route path="/cupons/:id/editar" element={<CouponForm />} />
+          <Route path="/carteira/novo" element={<VoucherForm />} />
+          <Route path="/carteira/:id/editar" element={<VoucherForm />} />
         </Route>
-        <Route path="/cupons" element={<Placeholder title="Cupons" />} />
+        <Route path="/cupons" element={<Coupons />} />
+        <Route path="/cupons/:id" element={<CouponDetail />} />
+        <Route path="/carteira" element={<Wallet />} />
+        <Route path="/carteira/:id" element={<VoucherDetail />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -179,8 +179,11 @@ describe("máquinas dentro da lavanderia", () => {
     await user.click(screen.getByRole("checkbox", { name: "Alterar canal" }));
     expect(screen.getByRole("textbox", { name: "Canal" })).toHaveProperty("disabled", false);
     expect(screen.getByLabelText("Maquinário").textContent).toContain("LG (FH069)");
+    expect(screen.getByRole("textbox", { name: "Canal" })).toHaveProperty("value", "100");
     await user.click(screen.getByLabelText("Maquinário"));
     await user.click(await screen.findByRole("option", { name: "Speed Queen (200ms)" }));
+    expect(screen.getByRole("textbox", { name: "Canal" })).toHaveProperty("value", "1");
+    expect(screen.getByRole("textbox", { name: "Canal" })).toHaveProperty("disabled", true);
     const cycle = screen.getByRole("textbox", { name: "Tempo de ciclo" });
     expect(cycle).toHaveProperty("value", "30");
     expect(cycle).toHaveProperty("disabled", true);
@@ -195,6 +198,6 @@ describe("máquinas dentro da lavanderia", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: "Lavadora 9", level: 1 })).toBeTruthy());
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     const post = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/api/machines") && c[1]?.method === "POST");
-    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ model: "SPEED_QUEEN_200MS", kind: "DRYER", cycleMinutes: 50 });
+    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ model: "SPEED_QUEEN_200MS", kind: "DRYER", cycleMinutes: 50, channel: 1 });
   });
 });

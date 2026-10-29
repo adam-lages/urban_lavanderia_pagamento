@@ -1,3 +1,4 @@
+import AccountBalanceWalletOutlined from "@mui/icons-material/AccountBalanceWalletOutlined";
 import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOutlined";
 import DashboardOutlined from "@mui/icons-material/DashboardOutlined";
 import PeopleOutlined from "@mui/icons-material/PeopleOutlined";
@@ -32,6 +33,7 @@ const ICONS: Record<(typeof NAV_ITEMS)[number]["to"], SvgIconComponent> = {
   "/vendas": ReceiptLongOutlined,
   "/lavanderias": StorefrontOutlined,
   "/cupons": ConfirmationNumberOutlined,
+  "/carteira": AccountBalanceWalletOutlined,
 };
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {

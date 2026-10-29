@@ -99,15 +99,16 @@ export class BoardService {
   async release(deviceId: string) {
     const dev = (await this.db.query("SELECT device_id FROM devices WHERE device_id = $1", [deviceId])).rows[0];
     if (!dev) throw new HttpError(404, "Placa não encontrada", "not_found");
-    const locked = await this.db.query("SELECT 1 FROM machines WHERE device_id = $1 AND active = false LIMIT 1", [deviceId]);
-    if (locked.rows[0]) throw new HttpError(409, "Máquina bloqueada", "machine_blocked");
+    const machine = (await this.db.query("SELECT channel, active FROM machines WHERE device_id = $1 LIMIT 1", [deviceId])).rows[0];
+    if (machine && machine.active === false) throw new HttpError(409, "Máquina bloqueada", "machine_blocked");
     if (!this.gateway.isOnline(deviceId)) throw new HttpError(409, "Placa offline", "device_offline");
     const id = randomUUID();
     const issued = this.now();
     const expires = new Date(issued.getTime() + this.config.commandTtlSeconds * 1000);
+    const channel = machine?.channel ?? MANUAL_CHANNEL;
     await this.db.query(
       "INSERT INTO release_commands (id, order_item_id, device_id, channel, status, attempts, issued_at, expires_at, created_at, source) VALUES ($1,$2,$3,$4,'PENDING',0,$5,$6,$5,'MANUAL')",
-      [id, `manual:${id}`, deviceId, MANUAL_CHANNEL, issued, expires],
+      [id, `manual:${id}`, deviceId, channel, issued, expires],
     );
     await logEvent(this.db, id, "CREATED", "Liberação manual pelo dashboard");
     await this.releases.dispatch(id);

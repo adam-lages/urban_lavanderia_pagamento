@@ -9,10 +9,12 @@ packages/protocol   contrato MQTT (tópicos e mensagens), compartilhado
 apps/backend        API REST (Express; em DEV: banco e MQTT embutidos)
 apps/dashboard      painel web React (Vite + React Router)
 apps/simulator      simulador de ESP32 via MQTT
+firmware-lg         ESP32 LG Giant C
+firmware-alliance   ESP32 Speed Queen / Alliance (STENXASP543DN01)
 infra/mosquitto     config do broker para desenvolvimento
 ```
 
-> **Repositório PRIVADO com segredos versionados** (decisão do dono): `.env` (tokens e senhas do backend/MQTT/Postgres) e `firmware/include/secrets.h` (Wi-Fi). Os valores são os padrão de desenvolvimento. **Nunca torne este repositório público sem antes rotacionar todas as credenciais** (e limpar o histórico do git).
+> **Repositório PRIVADO com segredos versionados** (decisão do dono): `.env` (tokens e senhas do backend/MQTT/Postgres) e `firmware-lg/include/secrets.h` (Wi-Fi). Os valores são os padrão de desenvolvimento. **Nunca torne este repositório público sem antes rotacionar todas as credenciais** (e limpar o histórico do git).
 
 ## Branches (fluxo do git)
 
@@ -38,7 +40,8 @@ Textos simples (configuração de hoje + o que vem depois). O app da maquininha 
 
 - [Dashboard (painel React)](apps/dashboard/HML.md)
 - [Backend (API)](apps/backend/HML.md)
-- [Firmware ESP32](firmware/HML.md) (gravação passo a passo: [COMO-GRAVAR.md](firmware/COMO-GRAVAR.md))
+- [Firmware ESP32 LG](firmware-lg/HML.md) (gravação: [COMO-GRAVAR.md](firmware-lg/COMO-GRAVAR.md))
+- [Firmware ESP32 Alliance / Speed Queen](firmware-alliance/HML.md) (gravação: [COMO-GRAVAR.md](firmware-alliance/COMO-GRAVAR.md))
 - [App P2 da Stone (rascunho)](pos-p2/HML.md)
 
 ## Como rodar
@@ -168,5 +171,5 @@ Depois do login (token de admin), o painel usa um menu lateral:
 
 ## Firmware ESP32
 
-- Firmware (PlatformIO) em [`firmware/`](firmware/README.md): Wi-Fi, MQTT, drivers de liberação (mock, GPIO, serial sniffer).
-- **Como gravar na ESP32 DOIT DevKit** (passo a passo, Arduino IDE e PlatformIO, Wi-Fi, modo mock): [`firmware/COMO-GRAVAR.md`](firmware/COMO-GRAVAR.md).
+- LG Giant C: [`firmware-lg/`](firmware-lg/README.md). Gravação: [`firmware-lg/COMO-GRAVAR.md`](firmware-lg/COMO-GRAVAR.md).
+- Speed Queen / Alliance (STENXASP543DN01): [`firmware-alliance/`](firmware-alliance/README.md). Gravação: [`firmware-alliance/COMO-GRAVAR.md`](firmware-alliance/COMO-GRAVAR.md). Não misture as duas pastas.

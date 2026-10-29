@@ -27,6 +27,83 @@ export interface Customer {
   createdAt: string;
 }
 export interface CustomerPage { items: Customer[]; total: number }
+export interface Coupon {
+  id: string;
+  code: string;
+  generated: boolean;
+  storeId: string;
+  storeName: string;
+  storeRole: Role;
+  allFranchiseStores: boolean;
+  percent: boolean;
+  amount: number;
+  valueLimitCents: number | null;
+  usageLimit: number | null;
+  validFrom: string;
+  validTo: string;
+  restrictHours: boolean;
+  hourStart: string;
+  hourEnd: string;
+  restrictWeekday: boolean;
+  weekday: number | null;
+  weekdayValueLimitCents: number | null;
+  weekdayUsageLimit: number | null;
+  restrictStore: boolean;
+  restrictStoreId: string;
+  restrictStoreName: string;
+  storeValueLimitCents: number | null;
+  storeUsageLimit: number | null;
+  restrictCustomer: boolean;
+  customerId: string;
+  customerName: string;
+  customerValueLimitCents: number | null;
+  customerUsageLimit: number | null;
+  restrictService: boolean;
+  service: Kind | "";
+  serviceValueLimitCents: number | null;
+  serviceUsageLimit: number | null;
+  birthday: boolean;
+  firstPurchase: boolean;
+  createdAt: string;
+}
+export interface CouponPage { items: Coupon[]; total: number }
+export const VOUCHER_CATEGORIES = [
+  { value: "CREDITO", label: "Crédito" },
+  { value: "CORTESIA", label: "Cortesia" },
+  { value: "REEMBOLSO", label: "Reembolso" },
+  { value: "PROMOCIONAL", label: "Promocional" },
+] as const;
+export type VoucherCategory = (typeof VOUCHER_CATEGORIES)[number]["value"];
+export interface Voucher {
+  id: string;
+  code: string;
+  storeId: string;
+  storeName: string;
+  storeRole: Role;
+  category: VoucherCategory;
+  amountCents: number;
+  balanceCents: number;
+  uses: number;
+  recurring: boolean;
+  validFrom: string;
+  validTo: string;
+  restrictStore: boolean;
+  restrictStoreId: string;
+  restrictStoreName: string;
+  storeValueLimitCents: number | null;
+  storeUsageLimit: number | null;
+  restrictCustomer: boolean;
+  customerId: string;
+  customerName: string;
+  customerValueLimitCents: number | null;
+  customerUsageLimit: number | null;
+  restrictService: boolean;
+  service: Kind | "";
+  serviceValueLimitCents: number | null;
+  serviceUsageLimit: number | null;
+  createdAt: string;
+}
+export interface VoucherPage { items: Voucher[]; total: number }
 export type PayMethod = "CREDIT" | "DEBIT" | "PIX" | "VOUCHER";
 export interface Sale {
   id: string;
@@ -63,6 +140,14 @@ export type MachineModel = (typeof MACHINE_MODELS)[number]["value"];
 export const DEFAULT_MACHINE_MODEL: MachineModel = "LG_FH069";
 export function machineModelLabel(value: string) {
   return MACHINE_MODELS.find((m) => m.value === value)?.label ?? value;
+}
+export function defaultChannel(model: MachineModel) {
+  return model === "SPEED_QUEEN" || model === "SPEED_QUEEN_200MS" ? "1" : "100";
+}
+export function channelBounds(model: MachineModel) {
+  return model === "SPEED_QUEEN" || model === "SPEED_QUEEN_200MS"
+    ? { min: 1, max: 32 }
+    : { min: 100, max: 1000 };
 }
 export interface PriceSchedule {
   startTime: string;

@@ -15,14 +15,14 @@ Você **não precisa** ligar a placa em nenhuma máquina de lavar para o primeir
 
 ## 1. Wi-Fi: SSID e senha
 
-As senhas do Wi-Fi já estão no arquivo `firmware/include/secrets.h` (repositório privado):
+As senhas do Wi-Fi já estão no arquivo `firmware-lg/include/secrets.h` (repositório privado):
 
 - **SSID:** `urban_lavanderia_setup`
 - **Senha:** `@Hoje123@`
 
 Para mudar a rede:
 
-1. Abra `firmware/include/secrets.h`.
+1. Abra `firmware-lg/include/secrets.h`.
 2. Altere `WIFI_SSID` e `WIFI_PASSWORD`.
 3. Grave o firmware de novo (senão a placa continua na rede antiga).
 
@@ -50,12 +50,12 @@ O firmware já está pronto para o PlatformIO.
 
 1. Instale o [VS Code](https://code.visualstudio.com/) e a extensão **PlatformIO IDE**  
    (ou no terminal: `pip install platformio`).
-2. Abra a pasta `firmware` do projeto.
+2. Abra a pasta `firmware-lg` do projeto.
 3. Conecte a ESP32 no USB. Se o computador não reconhecer, instale o driver **CP2102** ou **CH340** (depende do chip USB da sua placa). No Linux, seu usuário precisa do grupo `dialout`.
 4. Grave o modo mock:
 
 ```bash
-cd firmware
+cd firmware-lg
 pio run -e esp32doit-mock -t upload
 pio device monitor
 ```
@@ -66,7 +66,7 @@ pio device monitor
 
 ### 3.1 Teste do Liberar (confirmar que o LED reage)
 
-1. Edite `firmware/include/secrets.h`: `MQTT_HOST` = **IP do seu PC na rede local** (não `localhost`; no Windows use `ipconfig`, no Linux/Mac `ip a` ou `ifconfig`). `MQTT_PORT` = **1883**. PC e ESP32 no mesmo Wi-Fi (2,4 GHz).
+1. Edite `firmware-lg/include/secrets.h`: `MQTT_HOST` = **IP do seu PC na rede local** (não `localhost`; no Windows use `ipconfig`, no Linux/Mac `ip a` ou `ifconfig`). `MQTT_PORT` = **1883**. PC e ESP32 no mesmo Wi-Fi (2,4 GHz).
 2. No PC, rode o backend (`npm run dev:backend`). Ele já abre o MQTT na porta 1883.
 3. **Firewall**: libere a porta **TCP 1883** de entrada no PC (Windows: “Firewall do Windows” → nova regra de entrada). Sem isso a placa nunca fica Online.
 4. Grave o `esp32doit-mock` e abra o monitor serial. Anote o ID (`esp-...`).
@@ -94,7 +94,7 @@ Detalhes extras (GPIO, serial, MQTT) estão em [`README.md`](README.md).
 
 **Aviso**: o LED só liga na ESP32. **Não ligue nada deste LED à máquina LG.**
 
-**Ânodo comum** (perna longa vai ao 3,3 V): ligue a perna longa no **3V3** e troque em `firmware/include/secrets.h` para `#define RGB_COMMON_ANODE 1`.
+**Ânodo comum** (perna longa vai ao 3,3 V): ligue a perna longa no **3V3** e troque em `firmware-lg/include/secrets.h` para `#define RGB_COMMON_ANODE 1`.
 
 **Sem RGB ligado**: nada quebra; o LED azul da própria placa continua piscando como antes. Para desligar o recurso, comente as 3 linhas `RGB_*_PIN` em `secrets.h`.
 
@@ -111,7 +111,7 @@ O projeto foi feito para PlatformIO. A Arduino IDE também serve, com um pouco m
 4. Em **Ferramentas → Placa**, escolha **DOIT ESP32 DEVKIT V1** (ou “ESP32 Dev Module”).
 5. Em **Ferramentas → Porta**, escolha a porta USB da placa.
 6. Em **Ferramentas → Gerenciar bibliotecas**, instale **PubSubClient** e **ArduinoJson**.
-7. O código está em `firmware/src/main.cpp`, com pastas `include/` e `lib/lav_core/`.  
+7. O código está em `firmware-lg/src/main.cpp`, com pastas `include/` e `lib/lav_core/`.  
    Para o **primeiro teste (mock)**, o programa precisa ser compilado com `RELEASE_DRIVER` = `0` (LED).  
    Se a IDE não achar os arquivos, o caminho mais simples é gravar pelo PlatformIO (seção 3).
 8. Clique em **Carregar** (seta). Se travar em “Connecting…”, segure **BOOT**.

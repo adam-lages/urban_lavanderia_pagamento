@@ -3,7 +3,7 @@ import http from "node:http";
 import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { ZodError, z } from "zod";
-import { MAX_CHANNEL, MIN_CHANNEL } from "@lav/protocol";
+import { ALLIANCE_MIN_CHANNEL, MAX_CHANNEL } from "@lav/protocol";
 import { ROLES, resolveAuth, setUser, userOf } from "./auth.js";
 import type { Config } from "./config.js";
 import { isUniqueViolation, type Db } from "./db.js";
@@ -15,12 +15,14 @@ import { StoneDeeplinkProvider } from "./payments/stone-deeplink.js";
 import { BoardService } from "./services/boards.js";
 import { OrderService } from "./services/orders.js";
 import { ReleaseService, mapCommand } from "./services/releases.js";
+import { CouponService } from "./services/coupons.js";
 import { CustomerService } from "./services/customers.js";
-import { DEFAULT_MACHINE_MODEL, defaultCycleMinutes, MACHINE_MODELS, MAX_CYCLE_MINUTES, MachineService, mapMachine } from "./services/machines.js";
+import { assertChannelForModel, DEFAULT_MACHINE_MODEL, defaultCycleMinutes, MACHINE_MODELS, MAX_CYCLE_MINUTES, MachineService, mapMachine } from "./services/machines.js";
 import { OverviewService } from "./services/overview.js";
 import { PricingService } from "./services/pricing.js";
 import { SalesService } from "./services/sales.js";
 import { MACHINE_CODE, STORE_CODE, StoreService, mapStore } from "./services/stores.js";
+import { VOUCHER_CATEGORIES, VoucherService } from "./services/vouchers.js";
 import { franchiseEmail, login as loginUser, MIN_PASSWORD_LENGTH } from "./services/users.js";
 
 export interface AppDeps {
@@ -52,7 +54,7 @@ export interface LavHttp {
 const kind = z.enum(["WASHER", "DRYER"]);
 const model = z.enum(MACHINE_MODELS);
 const cycleMinutes = z.number().int().min(1).max(MAX_CYCLE_MINUTES);
-const channel = z.number().int().min(MIN_CHANNEL).max(MAX_CHANNEL);
+const channel = z.number().int().min(ALLIANCE_MIN_CHANNEL).max(MAX_CHANNEL);
 
 const mapPrice = (r: any) => ({ id: r.id, storeId: r.store_id, kind: r.kind, amountCents: r.amount_cents });
 const storeRole = z.enum(ROLES);
@@ -76,6 +78,8 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   const boards = new BoardService(db, gateway, releases, config, now);
   const stores = new StoreService(db);
   const customers = new CustomerService(db, now);
+  const coupons = new CouponService(db);
+  const vouchers = new VoucherService(db);
   const sales = new SalesService(db);
   const overview = new OverviewService(db, now);
   const machines = new MachineService(db);
@@ -199,6 +203,110 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     res.json(await sales.list(q));
   }));
 
+  const blank = z.string().trim().transform((v) => v || undefined);
+  const optCents = z.number().int().min(0).nullable().optional();
+  const couponBody = z.object({
+    code: blank.optional(),
+    generated: z.boolean().optional(),
+    storeId: z.string().min(1),
+    allFranchiseStores: z.boolean().optional(),
+    percent: z.boolean().optional(),
+    amount: z.number().int().min(0),
+    valueLimitCents: optCents,
+    usageLimit: optCents,
+    validFrom: blank.optional(),
+    validTo: blank.optional(),
+    restrictHours: z.boolean().optional(),
+    hourStart: blank.optional(),
+    hourEnd: blank.optional(),
+    restrictWeekday: z.boolean().optional(),
+    weekday: z.number().int().min(0).max(6).nullable().optional(),
+    weekdayValueLimitCents: optCents,
+    weekdayUsageLimit: optCents,
+    restrictStore: z.boolean().optional(),
+    restrictStoreId: blank.optional(),
+    storeValueLimitCents: optCents,
+    storeUsageLimit: optCents,
+    restrictCustomer: z.boolean().optional(),
+    customerId: blank.optional(),
+    customerValueLimitCents: optCents,
+    customerUsageLimit: optCents,
+    restrictService: z.boolean().optional(),
+    service: z.enum(["WASHER", "DRYER", ""]).optional(),
+    serviceValueLimitCents: optCents,
+    serviceUsageLimit: optCents,
+    birthday: z.boolean().optional(),
+    firstPurchase: z.boolean().optional(),
+  });
+  app.get("/coupons", requireAdmin, run(async (req, res) => {
+    const q = z.object({
+      storeId: z.string().optional(),
+      code: z.string().optional(),
+      page: z.coerce.number().int().min(0).default(0),
+      limit: z.coerce.number().int().min(1).max(100).default(10),
+    }).parse(req.query);
+    res.json(await coupons.list(q));
+  }));
+  app.get("/coupons/next-code", requireFranquia, run(async (_req, res) => {
+    res.json({ code: await coupons.uniqueCode() });
+  }));
+  app.post("/coupons", requireFranquia, run(async (req, res) => {
+    res.status(201).json(await coupons.create(couponBody.parse(req.body)));
+  }));
+  app.get("/coupons/:id", requireAdmin, run(async (req, res) => {
+    res.json(await coupons.get(req.params.id));
+  }));
+  app.patch("/coupons/:id", requireFranquia, run(async (req, res) => {
+    res.json(await coupons.update(req.params.id, couponBody.parse(req.body)));
+  }));
+  app.delete("/coupons/:id", requireFranquia, run(async (req, res) => {
+    await coupons.remove(req.params.id);
+    res.status(204).send();
+  }));
+
+  const voucherBody = z.object({
+    storeId: z.string().min(1),
+    category: z.enum(VOUCHER_CATEGORIES),
+    amountCents: z.number().int().min(1),
+    recurring: z.boolean().optional(),
+    validFrom: blank.optional(),
+    validTo: blank.optional(),
+    restrictStore: z.boolean().optional(),
+    restrictStoreId: blank.optional(),
+    storeValueLimitCents: optCents,
+    storeUsageLimit: optCents,
+    restrictCustomer: z.boolean().optional(),
+    customerId: blank.optional(),
+    customerValueLimitCents: optCents,
+    customerUsageLimit: optCents,
+    restrictService: z.boolean().optional(),
+    service: z.enum(["WASHER", "DRYER", ""]).optional(),
+    serviceValueLimitCents: optCents,
+    serviceUsageLimit: optCents,
+  });
+  app.get("/vouchers", requireAdmin, run(async (req, res) => {
+    const q = z.object({
+      storeId: z.string().optional(),
+      code: z.string().optional(),
+      page: z.coerce.number().int().min(0).default(0),
+      limit: z.coerce.number().int().min(1).max(100).default(10),
+    }).parse(req.query);
+    res.json(await vouchers.list(q));
+  }));
+  app.post("/vouchers", requireFranquia, run(async (req, res) => {
+    res.status(201).json(await vouchers.create(voucherBody.parse(req.body)));
+  }));
+  app.get("/vouchers/:id", requireAdmin, run(async (req, res) => {
+    res.json(await vouchers.get(req.params.id));
+  }));
+  app.patch("/vouchers/:id", requireFranquia, run(async (req, res) => {
+    res.json(await vouchers.update(req.params.id, voucherBody.parse(req.body)));
+  }));
+  app.delete("/vouchers/:id", requireFranquia, run(async (req, res) => {
+    await vouchers.remove(req.params.id);
+    res.status(204).send();
+  }));
+
   async function busyDevices() {
     const { rows } = await db.query("SELECT DISTINCT device_id FROM release_commands WHERE status IN ('PENDING','SENT')");
     return new Set(rows.map((r) => r.device_id));
@@ -247,6 +355,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
         priceOverrideCents: z.number().int().min(0).nullable().optional(),
       })
       .parse(req.body);
+    assertChannelForModel(b.model, b.channel);
     const store = await db.query("SELECT id FROM stores WHERE id = $1", [b.storeId]);
     if (!store.rows[0]) throw new HttpError(404, "Loja não encontrada", "not_found");
     const deviceId = normalizeDeviceId(b.deviceId);
@@ -280,6 +389,8 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     }
     const cur = (await db.query("SELECT * FROM machines WHERE id = $1", [id])).rows[0];
     if (!cur) throw new HttpError(404, "Máquina não encontrada", "not_found");
+    const nextModel = b.model ?? cur.model ?? DEFAULT_MACHINE_MODEL;
+    assertChannelForModel(nextModel, b.channel ?? cur.channel);
     const deviceId = b.deviceId === undefined ? cur.device_id : normalizeDeviceId(b.deviceId);
     if (deviceId) await assertDeviceFree(deviceId, id);
     const override = b.priceOverrideCents === undefined ? cur.price_override_cents : b.priceOverrideCents;
@@ -465,6 +576,17 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
       idempotencyKey: typeof key === "string" && key ? key : undefined,
     });
     res.status(created ? 201 : 200).json(order);
+  }));
+  app.post("/pos/vouchers/redeem", requirePos, run(async (req, res) => {
+    const b = z.object({
+      code: z.string().trim().min(1),
+      storeId: z.string().min(1),
+      purchaseCents: z.number().int().min(1),
+      customerId: z.string().optional(),
+      service: kind.optional(),
+    }).parse(req.body);
+    const today = (now?.() ?? new Date()).toISOString().slice(0, 10);
+    res.json(await vouchers.redeem({ ...b, today }));
   }));
   app.get("/orders/:id", requirePos, run(async (req, res) => {
     res.json(await orders.get(req.params.id));

@@ -8,6 +8,7 @@ export const NAV_ITEMS = [
   { to: "/clientes", label: "Clientes", section: "Listagem" },
   { to: "/lavanderias", label: "Lavanderias", section: "Gestão" },
   { to: "/cupons", label: "Cupons", section: "Promoção" },
+  { to: "/carteira", label: "Carteira", section: "Promoção" },
 ] as const;
 
 export function canSeeSection(section: (typeof NAV_SECTIONS)[number], role: Role) {
