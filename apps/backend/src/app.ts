@@ -19,6 +19,7 @@ import { CouponService } from "./services/coupons.js";
 import { CustomerService } from "./services/customers.js";
 import { assertChannelForModel, DEFAULT_MACHINE_MODEL, defaultCycleMinutes, MACHINE_MODELS, MAX_CYCLE_MINUTES, MachineService, mapMachine } from "./services/machines.js";
 import { OverviewService } from "./services/overview.js";
+import { PresenceService } from "./services/presence.js";
 import { PricingService } from "./services/pricing.js";
 import { SalesService } from "./services/sales.js";
 import { MACHINE_CODE, STORE_CODE, StoreService, mapStore } from "./services/stores.js";
@@ -84,6 +85,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   const overview = new OverviewService(db, now);
   const machines = new MachineService(db);
   const pricing = new PricingService(db);
+  const presence = new PresenceService(db, now);
 
   gateway.onAck((deviceId, ack) => {
     void boards.touch(deviceId).catch(() => undefined);
@@ -92,6 +94,7 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   gateway.onInfo((deviceId, info) => void boards.touch(deviceId, info).catch(() => undefined));
   gateway.onPresence((deviceId, status) => {
     void boards.touch(deviceId).catch(() => undefined);
+    void presence.record(deviceId, status).catch(() => undefined);
     if (status === "online") void releases.dispatchPendingForDevice(deviceId).catch(() => undefined);
   });
 
@@ -156,6 +159,10 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
   }));
   app.get("/stores/:id", requireFranquia, run(async (req, res) => {
     res.json(await stores.get(req.params.id));
+  }));
+  app.get("/stores/:id/presence", requireFranquia, run(async (req, res) => {
+    const q = z.object({ hours: z.coerce.number().int().min(1).max(168).default(24) }).parse(req.query);
+    res.json(await presence.history(req.params.id, q.hours));
   }));
   app.patch("/stores/:id", requireFranquia, run(async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(req.body, "code")) {

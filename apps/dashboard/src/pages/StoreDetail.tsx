@@ -4,6 +4,7 @@ import InfoOutlined from "@mui/icons-material/InfoOutlined";
 import LocalLaundryServiceOutlined from "@mui/icons-material/LocalLaundryServiceOutlined";
 import LocalOfferOutlined from "@mui/icons-material/LocalOfferOutlined";
 import PaymentsOutlined from "@mui/icons-material/PaymentsOutlined";
+import SensorsOutlined from "@mui/icons-material/SensorsOutlined";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
@@ -18,9 +19,10 @@ import { PageHeader } from "../components/PageHeader";
 import { StoreData } from "./stores/StoreData";
 import { StoreMachinesTable } from "./stores/StoreMachinesTable";
 import { StorePrices } from "./stores/StorePrices";
+import { StoreOperation } from "./stores/StoreOperation";
 import { StorePromotions } from "./stores/StorePromotions";
 
-type StoreTab = "dados" | "maquinas" | "precos" | "promocao";
+type StoreTab = "dados" | "maquinas" | "precos" | "promocao" | "operacao";
 
 export function StoreDetail() {
   const { id } = useParams();
@@ -83,11 +85,13 @@ export function StoreDetail() {
         <Tab value="maquinas" icon={<LocalLaundryServiceOutlined fontSize="small" />} iconPosition="start" label="Máquinas" sx={{ gap: 1 }} />
         <Tab value="precos" icon={<PaymentsOutlined fontSize="small" />} iconPosition="start" label="Preços" sx={{ gap: 1 }} />
         <Tab value="promocao" icon={<LocalOfferOutlined fontSize="small" />} iconPosition="start" label="Promoção" sx={{ gap: 1 }} />
+        <Tab value="operacao" icon={<SensorsOutlined fontSize="small" />} iconPosition="start" label="Interface em operação" sx={{ gap: 1 }} />
       </Tabs>
       {store && tab === "dados" && <StoreData store={store} />}
       {id && store && tab === "maquinas" && <StoreMachinesTable storeId={id} />}
       {id && store && tab === "precos" && <StorePrices storeId={id} />}
       {id && store && tab === "promocao" && <StorePromotions storeId={id} />}
+      {id && store && tab === "operacao" && <StoreOperation storeId={id} />}
       {confirmDelete && store && (
         <ConfirmDialog
           title="Excluir lavanderia"

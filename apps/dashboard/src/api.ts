@@ -126,6 +126,19 @@ export interface Sale {
   cardNumber: string;
 }
 export interface SalePage { items: Sale[]; total: number }
+
+export type PresenceState = "online" | "offline";
+export interface PresenceSegment { status: PresenceState; from: string; to: string }
+export interface MachinePresence {
+  machineId: string;
+  label: string;
+  kind: "WASHER" | "DRYER";
+  deviceId: string;
+  onlineMs: number;
+  offlineMs: number;
+  segments: PresenceSegment[];
+}
+export interface StorePresence { from: string; to: string; machines: MachinePresence[] }
 export const MACHINE_MODELS = [
   { value: "LG_FH069", label: "LG (FH069)" },
   { value: "ELECTROLUX_WE1100P_TE1220E", label: "Electrolux (WE1100P/TE1220E)" },
