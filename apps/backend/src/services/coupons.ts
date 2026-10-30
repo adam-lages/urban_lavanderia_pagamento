@@ -89,6 +89,8 @@ const SELECT = `
   LEFT JOIN stores rs ON rs.id = c.restrict_store_id
   LEFT JOIN customers cu ON cu.id = c.customer_id
 `;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const SP_OFFSET = "-03:00";
 
 function num(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
@@ -177,9 +179,11 @@ export class CouponService {
     return mapCoupon(rows[0]);
   }
 
-  async list(input: { storeId?: string; code?: string; page: number; limit: number }) {
+  async list(input: { storeId?: string; code?: string; from?: string; to?: string; page: number; limit: number }) {
     const storeId = input.storeId?.trim() || "";
     const code = normalizeCode(input.code ?? "");
+    const from = input.from?.trim() || "";
+    const to = input.to?.trim() || "";
     const where: string[] = [];
     const params: unknown[] = [];
     if (storeId) {
@@ -195,6 +199,12 @@ export class CouponService {
     if (code) {
       params.push(`%${code}%`);
       where.push(`c.code LIKE $${params.length}`);
+    }
+    if (DAY.test(from) && DAY.test(to)) {
+      params.push(new Date(`${from}T00:00:00.000${SP_OFFSET}`));
+      where.push(`c.created_at >= $${params.length}`);
+      params.push(new Date(`${to}T23:59:59.999${SP_OFFSET}`));
+      where.push(`c.created_at <= $${params.length}`);
     }
     const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const total = Number((await this.db.query(`SELECT COUNT(*) AS n FROM coupons c ${clause}`, params)).rows[0]?.n ?? 0);

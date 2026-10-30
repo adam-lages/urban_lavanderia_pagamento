@@ -101,10 +101,12 @@ beforeEach(() => {
     if (parsed.pathname === "/api/customers") {
       const name = (parsed.searchParams.get("name") ?? "").toLowerCase();
       const cpf = (parsed.searchParams.get("cpf") ?? "").replace(/\D/g, "");
+      const phone = (parsed.searchParams.get("phone") ?? "").replace(/\D/g, "");
       const storeId = parsed.searchParams.get("storeId") ?? "";
       const filtered = items.filter((c) =>
         (!name || c.name.toLowerCase().includes(name)) &&
         (!cpf || c.cpf.includes(cpf)) &&
+        (!phone || c.phone.includes(phone)) &&
         (!storeId || storeId === "loja-algarve" || c.id === "cli-ana"),
       );
       const page = Number(parsed.searchParams.get("page") ?? 0);
@@ -124,7 +126,7 @@ afterEach(() => {
 
 async function searchStore(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole("tab", { name: name === "Algarve" ? /Franqueados/ : /Franquia/ }));
-  await user.click(await screen.findByLabelText("Filtrar por lavanderia"));
+  await user.click(await screen.findByLabelText("Unidade"));
   await user.click(await screen.findByRole("option", { name }));
   await user.click(screen.getByRole("button", { name: "Pesquisar" }));
 }
@@ -134,7 +136,7 @@ describe("página Clientes", () => {
     renderApp("/clientes", { token: "dev-admin-token" });
     expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Pesquisar" })).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "Exportar" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Excel" })).toHaveProperty("disabled", true);
     expect(screen.queryByText("Ana Souza")).toBeNull();
   });
 
@@ -148,7 +150,7 @@ describe("página Clientes", () => {
     const user = userEvent.setup();
     renderApp("/clientes", { token: "dev-admin-token" });
     await user.click(await screen.findByRole("tab", { name: /Franquia/ }));
-    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
+    await user.click(screen.getByLabelText("Unidade"));
     expect(await screen.findByRole("option", { name: "Maranguape 1" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: "Algarve" })).toBeNull();
   });
@@ -193,6 +195,7 @@ describe("página Clientes", () => {
     renderApp("/clientes", { token: "dev-admin-token" });
     await searchStore(user, "Algarve");
     await screen.findByText("Carla Mendes");
+    await user.click(screen.getByRole("button", { name: /Mais opções/ }));
     await user.type(screen.getByRole("textbox", { name: "Filtrar por nome" }), "ana");
     expect(screen.getByText("Carla Mendes")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Pesquisar" }));
@@ -215,6 +218,19 @@ describe("página Clientes", () => {
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("storeId=loja-maranguape-1"))).toBe(true);
   });
 
+  it("filtra por telefone nas opções extras", async () => {
+    const user = userEvent.setup();
+    renderApp("/clientes", { token: "dev-admin-token" });
+    await searchStore(user, "Algarve");
+    expect(await screen.findByText("Carla Mendes")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Mais opções/ }));
+    await user.type(screen.getByRole("textbox", { name: "Filtrar por telefone" }), "81981110001");
+    await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+    await waitFor(() => expect(screen.queryByText("Carla Mendes")).toBeNull());
+    expect(screen.getByText("Ana Souza")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Filtrar por telefone" })).toHaveProperty("value", "(81) 98111-0001");
+  });
+
   it("exporta a planilha com os clientes", async () => {
     const user = userEvent.setup();
     const click = vi.fn();
@@ -225,8 +241,8 @@ describe("página Clientes", () => {
     renderApp("/clientes", { token: "dev-admin-token" });
     await searchStore(user, "Algarve");
     await screen.findByText("Ana Souza");
-    await user.click(screen.getByRole("button", { name: "Exportar" }));
-    expect(click).toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Excel" }));
+    await waitFor(() => expect(click).toHaveBeenCalled());
     expect(create).toHaveBeenCalled();
     HTMLAnchorElement.prototype.click = orig;
     create.mockRestore();

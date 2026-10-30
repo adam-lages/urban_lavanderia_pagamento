@@ -59,14 +59,31 @@ const FROM = `FROM order_items oi
   LEFT JOIN payments p ON p.order_id = o.id AND p.status = 'APPROVED'
   LEFT JOIN (SELECT order_id, COUNT(*) AS n FROM order_items GROUP BY order_id) qty ON qty.order_id = o.id`;
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const SP_OFFSET = "-03:00";
+const digits = (v: string) => v.replace(/\D/g, "");
+
 export class SalesService {
   constructor(private db: Db) {}
 
-  async list(input: { storeId?: string; customerName?: string; customerId?: string; orderId?: string; page: number; limit: number }) {
+  async list(input: {
+    storeId?: string;
+    customerName?: string;
+    customerCpf?: string;
+    customerId?: string;
+    orderId?: string;
+    from?: string;
+    to?: string;
+    page: number;
+    limit: number;
+  }) {
     const storeId = input.storeId?.trim() || "";
     const name = input.customerName?.trim() || "";
+    const cpf = digits(input.customerCpf ?? "");
     const customerId = input.customerId?.trim() || "";
     const orderId = input.orderId?.trim() || "";
+    const from = input.from?.trim() || "";
+    const to = input.to?.trim() || "";
     const where = ["o.status = 'PAID'"];
     const params: unknown[] = [];
     if (orderId) {
@@ -77,12 +94,24 @@ export class SalesService {
       params.push(storeId);
       where.push(`o.store_id = $${params.length}`);
     }
+    if (DAY.test(from) && DAY.test(to)) {
+      params.push(new Date(`${from}T00:00:00.000${SP_OFFSET}`));
+      where.push(`o.paid_at >= $${params.length}`);
+      params.push(new Date(`${to}T23:59:59.999${SP_OFFSET}`));
+      where.push(`o.paid_at <= $${params.length}`);
+    }
     if (customerId) {
       params.push(customerId);
       where.push(`o.customer_id = $${params.length}`);
-    } else if (name) {
-      params.push(`%${name}%`);
-      where.push(`c.name ILIKE $${params.length}`);
+    } else {
+      if (name) {
+        params.push(`%${name}%`);
+        where.push(`c.name ILIKE $${params.length}`);
+      }
+      if (cpf) {
+        params.push(`%${cpf}%`);
+        where.push(`c.cpf LIKE $${params.length}`);
+      }
     }
     const clause = `WHERE ${where.join(" AND ")}`;
     const total = Number((await this.db.query(`SELECT COUNT(*) AS n ${FROM} ${clause}`, params)).rows[0]?.n ?? 0);

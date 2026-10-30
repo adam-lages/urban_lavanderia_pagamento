@@ -15,19 +15,37 @@ import { PageHeader } from "../components/PageHeader";
 import { countByRole, StoreRoleTabs, storesOfRole, type StoreFilter } from "../components/StoreRoleTabs";
 import { TableLoading } from "../components/TableLoading";
 import { useStores } from "../hooks";
+import { rangeFor, type PeriodPreset } from "./home/periods";
+import { downloadExcel, salesSheet } from "./sales/format";
 import { SaleDetails } from "./sales/SaleDetails";
 import { SaleReceipt } from "./sales/SaleReceipt";
 import { SaleRow } from "./sales/SaleRow";
 import { SalesToolbar } from "./sales/SalesToolbar";
 
-const NO_QUERY = { storeId: "", customerName: "" };
+const emptyQuery = () => ({ storeId: "", customerName: "", customerCpf: "", ...rangeFor("today") });
+
+function salesParams(query: ReturnType<typeof emptyQuery>, page: number, limit: number) {
+  const params = new URLSearchParams({
+    storeId: query.storeId,
+    from: query.from,
+    to: query.to,
+    page: String(page),
+    limit: String(limit),
+  });
+  if (query.customerName) params.set("customerName", query.customerName);
+  if (query.customerCpf) params.set("customerCpf", query.customerCpf);
+  return params;
+}
 
 export function Sales() {
   const { stores } = useStores();
   const [role, setRole] = useState<StoreFilter>("FRANQUIA");
   const [storeId, setStoreId] = useState("");
+  const [preset, setPreset] = useState<PeriodPreset>("today");
+  const [range, setRange] = useState(() => rangeFor("today"));
   const [customerName, setCustomerName] = useState("");
-  const [query, setQuery] = useState(NO_QUERY);
+  const [customerCpf, setCustomerCpf] = useState("");
+  const [query, setQuery] = useState(emptyQuery);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [items, setItems] = useState<Sale[]>([]);
@@ -40,15 +58,24 @@ export function Sales() {
   const counts = useMemo(() => countByRole(stores), [stores]);
   const roleStores = useMemo(() => storesOfRole(stores, role), [stores, role]);
 
+  const changePreset = (next: PeriodPreset) => {
+    setPreset(next);
+    if (next !== "custom") setRange(rangeFor(next));
+  };
+
   const search = () => {
-    setQuery({ storeId, customerName });
+    setQuery({ storeId, customerName, customerCpf, ...range });
     setPage(0);
   };
 
   const clearFilters = () => {
+    const today = rangeFor("today");
     setStoreId("");
+    setPreset("today");
+    setRange(today);
     setCustomerName("");
-    setQuery(NO_QUERY);
+    setCustomerCpf("");
+    setQuery(emptyQuery());
     setPage(0);
   };
 
@@ -63,12 +90,7 @@ export function Sales() {
       setTotal(0);
       return;
     }
-    const params = new URLSearchParams({
-      storeId: query.storeId,
-      customerName: query.customerName,
-      page: String(page),
-      limit: String(rowsPerPage),
-    });
+    const params = salesParams(query, page, rowsPerPage);
     setLoading(true);
     api<SalePage>(`/sales?${params}`)
       .then((data) => {
@@ -82,6 +104,16 @@ export function Sales() {
 
   useEffect(() => { load(); }, [load]);
 
+  const exportSheet = async () => {
+    try {
+      const data = await api<SalePage>(`/sales?${salesParams(query, 0, 100)}`);
+      const sheet = salesSheet(data.items ?? []);
+      downloadExcel("vendas.xls", sheet.header, sheet.rows, "Vendas");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   return (
     <>
       <PageHeader title="Vendas" />
@@ -91,11 +123,21 @@ export function Sales() {
         <SalesToolbar
           stores={roleStores}
           storeId={storeId}
+          preset={preset}
+          from={range.from}
+          to={range.to}
           customerName={customerName}
+          customerCpf={customerCpf}
           onStore={setStoreId}
+          onPreset={changePreset}
+          onFrom={(v) => setRange((r) => ({ ...r, from: v }))}
+          onTo={(v) => setRange((r) => ({ ...r, to: v }))}
           onCustomerName={setCustomerName}
+          onCustomerCpf={setCustomerCpf}
           onSearch={search}
           onClear={clearFilters}
+          exportDisabled={!query.storeId}
+          onExport={() => void exportSheet()}
         />
         <TableLoading loading={loading}>
         <TableContainer>
@@ -124,7 +166,7 @@ export function Sales() {
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
               title={query.storeId ? "Nenhuma venda encontrada" : "Selecione uma lavanderia"}
-              description={query.storeId ? "Ajuste o filtro de lavanderia ou nome." : "Escolha a unidade e clique em Pesquisar para listar as vendas."}
+              description={query.storeId ? "Ajuste o período ou os filtros de cliente." : "Escolha a unidade e o período e clique em Pesquisar para listar as vendas."}
             />
           </Box>
         )}

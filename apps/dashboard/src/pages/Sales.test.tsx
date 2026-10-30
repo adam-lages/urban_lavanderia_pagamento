@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Sale, Store } from "../api";
 import { renderApp } from "../test/render";
+import { rangeFor } from "./home/periods";
 
 const maranguape: Store = { id: "loja-maranguape-1", name: "Maranguape 1", legalName: "", code: "10000001", address: "Rua A", cnpj: "11222333000181", role: "FRANQUIA", active: true };
 const algarve: Store = { id: "loja-algarve", name: "Algarve", legalName: "", code: "10000003", address: "Rua B", cnpj: "55666777000181", role: "FRANQUEADO", active: true };
@@ -79,9 +80,13 @@ beforeEach(() => {
     if (parsed.pathname === "/api/sales") {
       const storeId = parsed.searchParams.get("storeId") ?? "";
       const name = (parsed.searchParams.get("customerName") ?? "").toLowerCase();
+      const cpf = (parsed.searchParams.get("customerCpf") ?? "").replace(/\D/g, "");
       const orderId = parsed.searchParams.get("orderId") ?? "";
       const filtered = sales.filter((s) =>
-        (!storeId || s.storeId === storeId) && (!name || s.customerName.toLowerCase().includes(name)) && (!orderId || s.orderId === orderId),
+        (!storeId || s.storeId === storeId)
+        && (!name || s.customerName.toLowerCase().includes(name))
+        && (!cpf || s.customerCpf.includes(cpf))
+        && (!orderId || s.orderId === orderId),
       );
       return json({ items: filtered, total: filtered.length });
     }
@@ -98,7 +103,7 @@ afterEach(() => {
 
 async function searchStore(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole("tab", { name: name === "Algarve" ? /Franqueados/ : /Franquia/ }));
-  await user.click(await screen.findByLabelText("Filtrar por lavanderia"));
+  await user.click(await screen.findByLabelText("Unidade"));
   await user.click(await screen.findByRole("option", { name }));
   await user.click(screen.getByRole("button", { name: "Pesquisar" }));
 }
@@ -109,6 +114,13 @@ describe("página Vendas", () => {
     expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Pesquisar" })).toHaveProperty("disabled", true);
     expect(screen.queryByText("Ana Souza")).toBeNull();
+    const today = rangeFor("today");
+    const from = screen.getByLabelText("Data inicial") as HTMLInputElement;
+    const to = screen.getByLabelText("Data final") as HTMLInputElement;
+    expect(from.value).toBe(today.from);
+    expect(to.value).toBe(today.to);
+    expect(from.disabled).toBe(true);
+    expect(to.disabled).toBe(true);
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/sales"))).toBe(false);
   });
@@ -123,7 +135,7 @@ describe("página Vendas", () => {
     const user = userEvent.setup();
     renderApp("/vendas", { token: "dev-admin-token" });
     await user.click(await screen.findByRole("tab", { name: /Franqueados/ }));
-    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
+    await user.click(screen.getByLabelText("Unidade"));
     expect(await screen.findByRole("option", { name: "Algarve" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: "Maranguape 1" })).toBeNull();
   });
@@ -219,10 +231,48 @@ describe("página Vendas", () => {
     expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
     await searchStore(user, "Maranguape 1");
     expect(await screen.findByText("Ana Souza")).toBeTruthy();
+    const today = rangeFor("today");
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    expect(fetchMock.mock.calls.some((c) => {
+      const url = String(c[0]);
+      return url.includes("/sales") && url.includes(`from=${today.from}`) && url.includes(`to=${today.to}`);
+    })).toBe(true);
+    await user.click(screen.getByRole("button", { name: /Mais opções/ }));
     await user.type(screen.getByRole("textbox", { name: "Filtrar por nome do cliente" }), "bruno");
     expect(screen.getByText("Ana Souza")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Pesquisar" }));
     await waitFor(() => expect(screen.queryByText("Ana Souza")).toBeNull());
     expect(screen.getByText("Bruno Lima")).toBeTruthy();
+  });
+
+  it("filtra por CPF nas opções extras", async () => {
+    const user = userEvent.setup();
+    renderApp("/vendas", { token: "dev-admin-token" });
+    await searchStore(user, "Maranguape 1");
+    expect(await screen.findByText("Ana Souza")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Mais opções/ }));
+    await user.type(screen.getByRole("textbox", { name: "Filtrar por CPF" }), "390.533.447-05");
+    await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+    await waitFor(() => expect(screen.queryByText("Ana Souza")).toBeNull());
+    expect(screen.getByText("Bruno Lima")).toBeTruthy();
+  });
+
+  it("baixa o Excel com o resultado do filtro", async () => {
+    const user = userEvent.setup();
+    const click = vi.fn();
+    const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:vendas");
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const orig = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = click;
+    renderApp("/vendas", { token: "dev-admin-token" });
+    expect(screen.getByRole("button", { name: "Excel" })).toHaveProperty("disabled", true);
+    await searchStore(user, "Maranguape 1");
+    await screen.findByText("Ana Souza");
+    await user.click(screen.getByRole("button", { name: "Excel" }));
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(create).toHaveBeenCalled();
+    HTMLAnchorElement.prototype.click = orig;
+    create.mockRestore();
+    revoke.mockRestore();
   });
 });

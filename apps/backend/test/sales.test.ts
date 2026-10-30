@@ -29,8 +29,19 @@ describe("vendas", () => {
     const byName = await sales("customerName=ana souza&limit=100");
     expect(byName.items.every((r: { customerName: string }) => r.customerName === "Ana Souza")).toBe(true);
 
+    const byCpf = await sales("customerCpf=529.982.247-25&limit=100");
+    expect(byCpf.total).toBe(byName.total);
+    expect(byCpf.items.every((r: { customerCpf: string }) => r.customerCpf === "52998224725")).toBe(true);
+
     const byId = await sales("customerId=cli-ana&limit=100");
     expect(byId.total).toBe(byName.total);
+
+    const day = await sales("from=2026-10-27&to=2026-10-27&limit=5");
+    expect(day.total).toBeGreaterThan(0);
+    expect(day.total).toBeLessThan(all.total);
+
+    const empty = await sales("from=2000-01-01&to=2000-01-02&limit=5");
+    expect(empty.total).toBe(0);
   });
 
   it("filtra pelo pagamento e traz todos os serviços com o valor pago", async () => {

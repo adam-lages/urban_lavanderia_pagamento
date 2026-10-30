@@ -58,14 +58,28 @@ export function mapCustomer(r: any, now = new Date()): Customer {
 }
 
 const SELECT = "SELECT c.*, s.name AS store_name FROM customers c LEFT JOIN stores s ON s.id = c.store_id";
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const SP_OFFSET = "-03:00";
 
 export class CustomerService {
   constructor(private db: Db, private now: () => Date = () => new Date()) {}
 
-  async list(input: { name?: string; cpf?: string; storeId?: string; page: number; limit: number }) {
+  async list(input: {
+    name?: string;
+    cpf?: string;
+    phone?: string;
+    storeId?: string;
+    from?: string;
+    to?: string;
+    page: number;
+    limit: number;
+  }) {
     const name = input.name?.trim() || "";
     const storeId = input.storeId?.trim() || "";
     const cpf = digits(input.cpf ?? "");
+    const phone = digits(input.phone ?? "");
+    const from = input.from?.trim() || "";
+    const to = input.to?.trim() || "";
     const limit = input.limit;
     const offset = input.page * limit;
     const where: string[] = [];
@@ -77,6 +91,16 @@ export class CustomerService {
     if (cpf) {
       params.push(`%${cpf}%`);
       where.push(`c.cpf LIKE $${params.length}`);
+    }
+    if (phone) {
+      params.push(`%${phone}%`);
+      where.push(`c.phone LIKE $${params.length}`);
+    }
+    if (DAY.test(from) && DAY.test(to)) {
+      params.push(new Date(`${from}T00:00:00.000${SP_OFFSET}`));
+      where.push(`c.created_at >= $${params.length}`);
+      params.push(new Date(`${to}T23:59:59.999${SP_OFFSET}`));
+      where.push(`c.created_at <= $${params.length}`);
     }
     if (storeId) {
       params.push(storeId);

@@ -12,14 +12,13 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import ListSubheader from "@mui/material/ListSubheader";
-import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import { NavLink } from "react-router-dom";
-import { Logo } from "../components/Logo";
 import { useAuth } from "../auth";
 import { NAV_ITEMS, NAV_SECTIONS, canSeeSection } from "../nav";
-import { DRAWER_WIDTH, HEADER_HEIGHT } from "../theme";
+import { DRAWER_WIDTH } from "../theme";
 import { GREY } from "../theme/palette";
+import { BrandLockup } from "./BrandLockup";
 
 const navPaper = {
   width: DRAWER_WIDTH,
@@ -40,15 +39,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const { role } = useAuth();
   return (
     <>
-      <Box sx={{ height: HEADER_HEIGHT, px: 2.5, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Logo />
-        <Box>
-          <Typography variant="subtitle2">Urban Lavanderia</Typography>
-          <Typography variant="caption" color="text.secondary">
-            Painel operacional
-          </Typography>
-        </Box>
-      </Box>
+      <BrandLockup />
       <Box component="nav" aria-label="Menu principal" sx={{ px: 2, pb: 3 }}>
         {NAV_SECTIONS.filter((section) => canSeeSection(section, role)).map((section) => (
           <List key={section} disablePadding subheader={<ListSubheader disableSticky>{section}</ListSubheader>}>

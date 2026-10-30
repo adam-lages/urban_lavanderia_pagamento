@@ -26,6 +26,12 @@ describe("carteira (vouchers)", () => {
 
     const list = (await s.app.inject({ method: "GET", url: `/vouchers?storeId=${store.id}`, headers: ADMIN })).json();
     expect(list.total).toBe(1);
+    const empty = (await s.app.inject({
+      method: "GET",
+      url: `/vouchers?storeId=${store.id}&from=2000-01-01&to=2000-01-02`,
+      headers: ADMIN,
+    })).json();
+    expect(empty.total).toBe(0);
 
     const patched = await s.app.inject({
       method: "PATCH", url: `/vouchers/${v.id}`, headers: ADMIN,

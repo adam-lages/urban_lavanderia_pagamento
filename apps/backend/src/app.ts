@@ -180,7 +180,10 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     const q = z.object({
       name: z.string().optional(),
       cpf: z.string().optional(),
+      phone: z.string().optional(),
       storeId: z.string().optional(),
+      from: z.string().optional(),
+      to: z.string().optional(),
       page: z.coerce.number().int().min(0).default(0),
       limit: z.coerce.number().int().min(1).max(100).default(10),
     }).parse(req.query);
@@ -203,8 +206,11 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     const q = z.object({
       storeId: z.string().optional(),
       customerName: z.string().optional(),
+      customerCpf: z.string().optional(),
       customerId: z.string().optional(),
       orderId: z.string().optional(),
+      from: z.string().optional(),
+      to: z.string().optional(),
       page: z.coerce.number().int().min(0).default(0),
       limit: z.coerce.number().int().min(1).max(100).default(10),
     }).parse(req.query);
@@ -250,6 +256,8 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     const q = z.object({
       storeId: z.string().optional(),
       code: z.string().optional(),
+      from: z.string().optional(),
+      to: z.string().optional(),
       page: z.coerce.number().int().min(0).default(0),
       limit: z.coerce.number().int().min(1).max(100).default(10),
     }).parse(req.query);
@@ -296,6 +304,8 @@ export async function buildApp({ db, gateway, config, now }: AppDeps): Promise<L
     const q = z.object({
       storeId: z.string().optional(),
       code: z.string().optional(),
+      from: z.string().optional(),
+      to: z.string().optional(),
       page: z.coerce.number().int().min(0).default(0),
       limit: z.coerce.number().int().min(1).max(100).default(10),
     }).parse(req.query);

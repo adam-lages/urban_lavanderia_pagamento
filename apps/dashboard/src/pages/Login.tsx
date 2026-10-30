@@ -46,10 +46,7 @@ export function Login() {
     <Box sx={{ display: "flex", minHeight: "100%" }}>
       <AuthHero />
       <Box sx={{ flex: { xs: 1, md: "0 0 560px" }, display: "flex", flexDirection: "column", px: { xs: 2, sm: 6 }, py: 3 }}>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-          <Logo size={36} />
-          <Typography variant="subtitle1">Urban Lavanderia</Typography>
-        </Stack>
+        <Logo height={32} />
         <Box
           component="form"
           onSubmit={onSubmit}

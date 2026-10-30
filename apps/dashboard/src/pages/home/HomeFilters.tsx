@@ -1,8 +1,8 @@
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import { FilterActions } from "../../components/FilterActions";
 import type { Store } from "../../api";
 import { PERIOD_OPTIONS, type PeriodPreset } from "./periods";
 
@@ -28,7 +28,7 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
       <Box
         component="form"
         onSubmit={(e) => { e.preventDefault(); if (!invalid) onSearch(); }}
-        sx={{ p: 2.5, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}
+        sx={{ p: 2.5, display: "flex", gap: 1.5, alignItems: "center", flexWrap: "wrap" }}
       >
         <TextField
           select
@@ -49,7 +49,7 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
           value={preset}
           onChange={(e) => onPreset(e.target.value as PeriodPreset)}
           label="Período"
-          sx={{ width: { xs: 1, sm: 200 } }}
+          sx={{ width: { xs: 1, sm: 148 } }}
           slotProps={{ htmlInput: { "aria-label": "Período" } }}
         >
           {PERIOD_OPTIONS.map((o) => (
@@ -63,7 +63,7 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
           value={from}
           onChange={(e) => onFrom(e.target.value)}
           disabled={!custom}
-          sx={{ width: { xs: 1, sm: 170 } }}
+          sx={{ width: { xs: 1, sm: 148 } }}
           slotProps={{ inputLabel: { shrink: true }, htmlInput: { "aria-label": "Data inicial" } }}
         />
         <TextField
@@ -73,15 +73,10 @@ export function HomeFilters({ stores, storeId, preset, from, to, onStore, onPres
           value={to}
           onChange={(e) => onTo(e.target.value)}
           disabled={!custom}
-          sx={{ width: { xs: 1, sm: 170 } }}
+          sx={{ width: { xs: 1, sm: 148 } }}
           slotProps={{ inputLabel: { shrink: true }, htmlInput: { "aria-label": "Data final" } }}
         />
-        <Button type="submit" variant="contained" color="inherit" disabled={invalid}>
-          Pesquisar
-        </Button>
-        <Button type="button" variant="outlined" color="inherit" onClick={onClear}>
-          Limpar
-        </Button>
+        <FilterActions searchDisabled={invalid} onClear={onClear} />
       </Box>
     </Card>
   );

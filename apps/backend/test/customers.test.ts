@@ -30,6 +30,15 @@ describe("clientes", () => {
     const byCpf = (await s.app.inject({ method: "GET", url: "/customers?cpf=529.982.247-25", headers: ADMIN })).json();
     expect(byCpf.total).toBe(1);
     expect(byCpf.items[0].cpf).toBe("52998224725");
+
+    const byPhone = (await s.app.inject({ method: "GET", url: "/customers?phone=(81)%2098111-0001&limit=10", headers: ADMIN })).json();
+    expect(byPhone.total).toBe(1);
+    expect(byPhone.items[0].name).toBe("Ana Souza");
+
+    const byDay = (await s.app.inject({ method: "GET", url: "/customers?from=2026-01-01&to=2026-01-31&limit=10", headers: ADMIN })).json();
+    expect(byDay.items.some((c: { name: string }) => c.name === "Ana Souza")).toBe(true);
+    const empty = (await s.app.inject({ method: "GET", url: "/customers?from=2000-01-01&to=2000-01-02", headers: ADMIN })).json();
+    expect(empty.total).toBe(0);
   });
 
   it("filtra os clientes pela unidade de cadastro e informa a unidade", async () => {

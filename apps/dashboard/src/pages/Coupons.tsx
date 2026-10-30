@@ -19,11 +19,25 @@ import { PageHeader } from "../components/PageHeader";
 import { countByRole, StoreRoleTabs, storesOfRole, type StoreFilter } from "../components/StoreRoleTabs";
 import { TableLoading } from "../components/TableLoading";
 import { useStores } from "../hooks";
+import { downloadExcel } from "../excel";
 import { CouponRow } from "./coupons/CouponRow";
 import { CouponsToolbar } from "./coupons/CouponsToolbar";
-import { couponsCsv, downloadCsv } from "./coupons/format";
+import { couponsSheet } from "./coupons/format";
+import { rangeFor, type PeriodPreset } from "./home/periods";
 
-const NO_FILTER = { storeId: "", code: "" };
+const emptyQuery = () => ({ storeId: "", code: "", ...rangeFor("today") });
+
+function couponParams(query: ReturnType<typeof emptyQuery>, page: number, limit: number) {
+  const params = new URLSearchParams({
+    storeId: query.storeId,
+    from: query.from,
+    to: query.to,
+    page: String(page),
+    limit: String(limit),
+  });
+  if (query.code) params.set("code", query.code);
+  return params;
+}
 
 export function Coupons() {
   const navigate = useNavigate();
@@ -31,8 +45,10 @@ export function Coupons() {
   const { stores } = useStores();
   const [tab, setTab] = useState<StoreFilter>("FRANQUIA");
   const [storeId, setStoreId] = useState("");
+  const [preset, setPreset] = useState<PeriodPreset>("today");
+  const [range, setRange] = useState(() => rangeFor("today"));
   const [code, setCode] = useState("");
-  const [query, setQuery] = useState(NO_FILTER);
+  const [query, setQuery] = useState(emptyQuery);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [items, setItems] = useState<Coupon[]>([]);
@@ -43,15 +59,23 @@ export function Coupons() {
   const counts = useMemo(() => countByRole(stores), [stores]);
   const roleStores = useMemo(() => storesOfRole(stores, tab), [stores, tab]);
 
+  const changePreset = (next: PeriodPreset) => {
+    setPreset(next);
+    if (next !== "custom") setRange(rangeFor(next));
+  };
+
   const search = () => {
-    setQuery({ storeId, code });
+    setQuery({ storeId, code, ...range });
     setPage(0);
   };
 
   const clearFilters = () => {
+    const today = rangeFor("today");
     setStoreId("");
+    setPreset("today");
+    setRange(today);
     setCode("");
-    setQuery(NO_FILTER);
+    setQuery(emptyQuery());
     setPage(0);
   };
 
@@ -66,12 +90,7 @@ export function Coupons() {
       setTotal(0);
       return;
     }
-    const params = new URLSearchParams({
-      storeId: query.storeId,
-      code: query.code,
-      page: String(page),
-      limit: String(rowsPerPage),
-    });
+    const params = couponParams(query, page, rowsPerPage);
     setLoading(true);
     api<CouponPage>(`/coupons?${params}`)
       .then((data) => {
@@ -87,9 +106,9 @@ export function Coupons() {
 
   const exportSheet = async () => {
     try {
-      const params = new URLSearchParams({ ...query, page: "0", limit: "100" });
-      const data = await api<CouponPage>(`/coupons?${params}`);
-      downloadCsv("cupons.csv", couponsCsv(data.items));
+      const data = await api<CouponPage>(`/coupons?${couponParams(query, 0, 100)}`);
+      const sheet = couponsSheet(data.items ?? []);
+      downloadExcel("cupons.xls", sheet.header, sheet.rows, "Cupons");
     } catch (e) {
       setError((e as Error).message);
     }
@@ -113,8 +132,14 @@ export function Coupons() {
         <CouponsToolbar
           stores={roleStores}
           storeId={storeId}
+          preset={preset}
+          from={range.from}
+          to={range.to}
           code={code}
           onStore={setStoreId}
+          onPreset={changePreset}
+          onFrom={(v) => setRange((r) => ({ ...r, from: v }))}
+          onTo={(v) => setRange((r) => ({ ...r, to: v }))}
           onCode={setCode}
           onSearch={search}
           onClear={clearFilters}
@@ -147,7 +172,7 @@ export function Coupons() {
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
               title={query.storeId ? "Nenhum cupom encontrado" : "Selecione uma lavanderia"}
-              description={query.storeId ? "Ajuste a lavanderia ou o código." : "Escolha a unidade e clique em Pesquisar para listar os cupons."}
+              description={query.storeId ? "Ajuste o período ou o código." : "Escolha a unidade e o período e clique em Pesquisar para listar os cupons."}
             />
           </Box>
         )}

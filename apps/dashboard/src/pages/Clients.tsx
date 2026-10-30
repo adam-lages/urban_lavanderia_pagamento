@@ -15,21 +15,40 @@ import { EmptyContent } from "../components/EmptyContent";
 import { PageHeader } from "../components/PageHeader";
 import { countByRole, StoreRoleTabs, storesOfRole, type StoreFilter } from "../components/StoreRoleTabs";
 import { TableLoading } from "../components/TableLoading";
+import { downloadExcel } from "../excel";
 import { useStores } from "../hooks";
 import { ClientRow } from "./clients/ClientRow";
 import { ClientsToolbar } from "./clients/ClientsToolbar";
-import { customersCsv, downloadCsv } from "./clients/format";
+import { customersSheet } from "./clients/format";
+import { rangeFor, type PeriodPreset } from "./home/periods";
 
-const NO_FILTER = { storeId: "", name: "", cpf: "" };
+const emptyQuery = () => ({ storeId: "", name: "", cpf: "", phone: "", ...rangeFor("today") });
+
+function customerParams(query: ReturnType<typeof emptyQuery>, page: number, limit: number) {
+  const params = new URLSearchParams({
+    storeId: query.storeId,
+    from: query.from,
+    to: query.to,
+    page: String(page),
+    limit: String(limit),
+  });
+  if (query.name) params.set("name", query.name);
+  if (query.cpf) params.set("cpf", query.cpf);
+  if (query.phone) params.set("phone", query.phone);
+  return params;
+}
 
 export function Clients() {
   const navigate = useNavigate();
   const { stores } = useStores();
   const [role, setRole] = useState<StoreFilter>("FRANQUIA");
   const [storeId, setStoreId] = useState("");
+  const [preset, setPreset] = useState<PeriodPreset>("today");
+  const [range, setRange] = useState(() => rangeFor("today"));
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
-  const [query, setQuery] = useState(NO_FILTER);
+  const [phone, setPhone] = useState("");
+  const [query, setQuery] = useState(emptyQuery);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [items, setItems] = useState<Customer[]>([]);
@@ -40,16 +59,25 @@ export function Clients() {
   const counts = useMemo(() => countByRole(stores), [stores]);
   const roleStores = useMemo(() => storesOfRole(stores, role), [stores, role]);
 
+  const changePreset = (next: PeriodPreset) => {
+    setPreset(next);
+    if (next !== "custom") setRange(rangeFor(next));
+  };
+
   const search = () => {
-    setQuery({ storeId, name, cpf });
+    setQuery({ storeId, name, cpf, phone, ...range });
     setPage(0);
   };
 
   const clearFilters = () => {
+    const today = rangeFor("today");
     setStoreId("");
+    setPreset("today");
+    setRange(today);
     setName("");
     setCpf("");
-    setQuery(NO_FILTER);
+    setPhone("");
+    setQuery(emptyQuery());
     setPage(0);
   };
 
@@ -64,13 +92,8 @@ export function Clients() {
       setTotal(0);
       return;
     }
-    const params = new URLSearchParams({
-      ...query,
-      page: String(page),
-      limit: String(rowsPerPage),
-    });
     setLoading(true);
-    api<CustomerPage>(`/customers?${params}`)
+    api<CustomerPage>(`/customers?${customerParams(query, page, rowsPerPage)}`)
       .then((data) => {
         setItems(data.items ?? []);
         setTotal(data.total ?? 0);
@@ -84,9 +107,9 @@ export function Clients() {
 
   const exportSheet = async () => {
     try {
-      const params = new URLSearchParams({ ...query, page: "0", limit: "100" });
-      const data = await api<CustomerPage>(`/customers?${params}`);
-      downloadCsv("clientes.csv", customersCsv(data.items));
+      const data = await api<CustomerPage>(`/customers?${customerParams(query, 0, 100)}`);
+      const sheet = customersSheet(data.items ?? []);
+      downloadExcel("clientes.xls", sheet.header, sheet.rows, "Clientes");
     } catch (e) {
       setError((e as Error).message);
     }
@@ -101,11 +124,19 @@ export function Clients() {
         <ClientsToolbar
           stores={roleStores}
           storeId={storeId}
+          preset={preset}
+          from={range.from}
+          to={range.to}
           name={name}
           cpf={cpf}
+          phone={phone}
           onStore={setStoreId}
+          onPreset={changePreset}
+          onFrom={(v) => setRange((r) => ({ ...r, from: v }))}
+          onTo={(v) => setRange((r) => ({ ...r, to: v }))}
           onName={setName}
           onCpf={setCpf}
+          onPhone={setPhone}
           onSearch={search}
           onClear={clearFilters}
           exportDisabled={!query.storeId}
@@ -136,7 +167,7 @@ export function Clients() {
           <Box sx={{ p: 2.5 }}>
             <EmptyContent
               title={query.storeId ? "Nenhum cliente encontrado" : "Selecione uma lavanderia"}
-              description={query.storeId ? "Ajuste a lavanderia, o nome ou o CPF." : "Escolha a unidade e clique em Pesquisar para listar os clientes."}
+              description={query.storeId ? "Ajuste o período ou os filtros de cliente." : "Escolha a unidade e o período e clique em Pesquisar para listar os clientes."}
             />
           </Box>
         )}

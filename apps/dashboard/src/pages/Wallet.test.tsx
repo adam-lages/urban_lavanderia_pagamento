@@ -1,4 +1,4 @@
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Voucher } from "../api";
@@ -82,7 +82,7 @@ describe("página Carteira", () => {
     renderApp("/carteira", { token: "dev-admin-token" });
     expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
     expect(screen.queryByRole("tab", { name: /Todos/ })).toBeNull();
-    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
+    await user.click(screen.getByLabelText("Unidade"));
     await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
     await user.click(screen.getByRole("button", { name: "Pesquisar" }));
     expect(await screen.findByText("VCABC12345")).toBeTruthy();
@@ -110,5 +110,39 @@ describe("página Carteira", () => {
     renderApp("/carteira", { token: "session-token", role: "FRANQUEADO" });
     expect(await screen.findByRole("heading", { name: "Carteira" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Novo voucher" })).toBeNull();
+  });
+
+  it("envia o período de cadastro ao pesquisar", async () => {
+    const user = userEvent.setup();
+    renderApp("/carteira", { token: "dev-admin-token" });
+    await user.click(await screen.findByLabelText("Unidade"));
+    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
+    await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+    await screen.findByText("VCABC12345");
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    expect(fetchMock.mock.calls.some((c) => {
+      const url = String(c[0]);
+      return url.includes("/api/vouchers") && url.includes("from=") && url.includes("to=");
+    })).toBe(true);
+  });
+
+  it("exporta a planilha com os vouchers", async () => {
+    const user = userEvent.setup();
+    const click = vi.fn();
+    const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:carteira");
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const orig = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = click;
+    renderApp("/carteira", { token: "dev-admin-token" });
+    await user.click(await screen.findByLabelText("Unidade"));
+    await user.click(await screen.findByRole("option", { name: "Maranguape 1" }));
+    await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+    await screen.findByText("VCABC12345");
+    await user.click(screen.getByRole("button", { name: "Excel" }));
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(create).toHaveBeenCalled();
+    HTMLAnchorElement.prototype.click = orig;
+    create.mockRestore();
+    revoke.mockRestore();
   });
 });

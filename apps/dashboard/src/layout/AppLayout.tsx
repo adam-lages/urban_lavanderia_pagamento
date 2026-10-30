@@ -6,6 +6,7 @@ import Toolbar from "@mui/material/Toolbar";
 import { alpha } from "@mui/material/styles";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
+import { Logo } from "../components/Logo";
 import { DRAWER_WIDTH, HEADER_HEIGHT } from "../theme";
 import { AccountMenu } from "./AccountMenu";
 import { Sidebar } from "./Sidebar";
@@ -25,12 +26,24 @@ export function AppLayout() {
           ml: { lg: `${DRAWER_WIDTH}px` },
           backdropFilter: "blur(6px)",
           backgroundColor: alpha(theme.palette.background.default, 0.8),
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 2,
+            background: `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.primary.main} 42%, transparent 78%)`,
+          },
         })}
       >
-        <Toolbar sx={{ minHeight: { xs: HEADER_HEIGHT }, px: { xs: 2, lg: 5 }, gap: 1 }}>
+        <Toolbar sx={{ minHeight: { xs: HEADER_HEIGHT }, px: { xs: 2, lg: 5 }, gap: 1.5 }}>
           <IconButton edge="start" aria-label="Abrir menu" onClick={() => setMobileOpen(true)} sx={{ display: { lg: "none" } }}>
             <MenuRounded />
           </IconButton>
+          <Box sx={{ display: { xs: "block", lg: "none" }, lineHeight: 0 }}>
+            <Logo height={22} />
+          </Box>
           <Box sx={{ flexGrow: 1 }} />
           <ThemeModeMenu />
           <AccountMenu />

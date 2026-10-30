@@ -12,12 +12,21 @@ export function voucherStatus(v: Pick<Voucher, "validFrom" | "validTo" | "balanc
   return "ATIVO" as const;
 }
 
-export function vouchersCsv(items: Voucher[]) {
+export function vouchersSheet(items: Voucher[]) {
   const header = ["Código", "Categoria", "Lavanderia", "Valor", "Saldo", "Validade", "Status"];
-  const lines = items.map((v) =>
-    [v.code, categoryLabel(v.category), v.storeName, brl(v.amountCents), brl(v.balanceCents), periodLabel(v.validFrom, v.validTo), voucherStatus(v)]
-      .map((c) => `"${c.replaceAll('"', '""')}"`)
-      .join(";"),
-  );
-  return [header.join(";"), ...lines].join("\n");
+  const rows = items.map((v) => [
+    v.code,
+    categoryLabel(v.category),
+    v.storeName,
+    brl(v.amountCents),
+    brl(v.balanceCents),
+    periodLabel(v.validFrom, v.validTo),
+    voucherStatus(v),
+  ]);
+  return { header, rows };
+}
+
+export function vouchersCsv(items: Voucher[]) {
+  const { header, rows } = vouchersSheet(items);
+  return [header.join(";"), ...rows.map((cols) => cols.map((c) => `"${c.replaceAll('"', '""')}"`).join(";"))].join("\n");
 }

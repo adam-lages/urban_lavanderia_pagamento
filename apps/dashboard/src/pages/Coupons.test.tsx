@@ -121,7 +121,7 @@ afterEach(() => {
 
 async function searchStore(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole("tab", { name: name === "Algarve" ? /Franqueados/ : /Franquia/ }));
-  await user.click(await screen.findByLabelText("Filtrar por lavanderia"));
+  await user.click(await screen.findByLabelText("Unidade"));
   await user.click(await screen.findByRole("option", { name }));
   await user.click(screen.getByRole("button", { name: "Pesquisar" }));
 }
@@ -131,6 +131,7 @@ describe("página Cupons", () => {
     renderApp("/cupons", { token: "dev-admin-token" });
     expect(await screen.findByText("Selecione uma lavanderia")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Pesquisar" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Excel" })).toHaveProperty("disabled", true);
     expect(screen.queryByText("LAVA10")).toBeNull();
   });
 
@@ -139,7 +140,7 @@ describe("página Cupons", () => {
     renderApp("/cupons", { token: "dev-admin-token" });
     expect(await screen.findByRole("tab", { name: /Franquia/, selected: true })).toBeTruthy();
     expect(screen.queryByRole("tab", { name: /Todos/ })).toBeNull();
-    await user.click(screen.getByLabelText("Filtrar por lavanderia"));
+    await user.click(screen.getByLabelText("Unidade"));
     expect(await screen.findByRole("option", { name: "Maranguape 1" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: "Algarve" })).toBeNull();
   });
@@ -179,6 +180,42 @@ describe("página Cupons", () => {
     renderApp("/cupons", { token: "session-token", role: "FRANQUEADO", email: "loja@urban.test" });
     expect(await screen.findByRole("heading", { name: "Cupons" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Novo cupom" })).toBeNull();
+  });
+
+  it("filtra por código nas opções extras e envia a data de cadastro", async () => {
+    items.push({ ...lava10, id: "cup-3", code: "PROMO99", allFranchiseStores: false, amount: 20 });
+    const user = userEvent.setup();
+    renderApp("/cupons", { token: "dev-admin-token" });
+    await searchStore(user, "Maranguape 1");
+    await screen.findByText("PROMO99");
+    await user.click(screen.getByRole("button", { name: /Mais opções/ }));
+    await user.type(screen.getByRole("textbox", { name: "Filtrar por código" }), "lava");
+    await user.click(screen.getByRole("button", { name: "Pesquisar" }));
+    await waitFor(() => expect(screen.queryByText("PROMO99")).toBeNull());
+    expect(screen.getByText("LAVA10")).toBeTruthy();
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    expect(fetchMock.mock.calls.some((c) => {
+      const url = String(c[0]);
+      return url.includes("/api/coupons") && url.includes("code=lava") && url.includes("from=") && url.includes("to=");
+    })).toBe(true);
+  });
+
+  it("exporta a planilha com os cupons", async () => {
+    const user = userEvent.setup();
+    const click = vi.fn();
+    const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:cupons");
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const orig = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = click;
+    renderApp("/cupons", { token: "dev-admin-token" });
+    await searchStore(user, "Maranguape 1");
+    await screen.findByText("LAVA10");
+    await user.click(screen.getByRole("button", { name: "Excel" }));
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(create).toHaveBeenCalled();
+    HTMLAnchorElement.prototype.click = orig;
+    create.mockRestore();
+    revoke.mockRestore();
   });
 });
 

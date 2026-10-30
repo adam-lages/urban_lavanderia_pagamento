@@ -1,24 +1,16 @@
-import LocalLaundryServiceRounded from "@mui/icons-material/LocalLaundryServiceRounded";
 import Box from "@mui/material/Box";
-import { alpha } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
+import logoDark from "../assets/logo-urban-dark.png";
+import logoLight from "../assets/logo-urban-light.png";
 
-export function Logo({ size = 40 }: { size?: number }) {
+export function Logo({ height = 28 }: { height?: number }) {
+  const dark = useTheme().palette.mode === "dark";
   return (
     <Box
-      aria-hidden="true"
-      sx={(theme) => ({
-        width: size,
-        height: size,
-        flexShrink: 0,
-        display: "grid",
-        placeItems: "center",
-        borderRadius: 1.5,
-        color: "#fff",
-        background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.primary.main} 70%)`,
-        boxShadow: `0 8px 16px 0 ${alpha(theme.palette.primary.main, 0.24)}`,
-      })}
-    >
-      <LocalLaundryServiceRounded sx={{ fontSize: size * 0.6 }} />
-    </Box>
+      component="img"
+      src={dark ? logoDark : logoLight}
+      alt="Urban"
+      sx={{ height, width: "auto", display: "block", objectFit: "contain" }}
+    />
   );
 }

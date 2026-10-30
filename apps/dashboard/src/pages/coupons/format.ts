@@ -35,20 +35,22 @@ export function storeScope(c: Pick<Coupon, "allFranchiseStores" | "storeName">) 
   return c.allFranchiseStores ? "Todas da franquia" : c.storeName;
 }
 
-export function couponsCsv(items: Coupon[]) {
+export function couponsSheet(items: Coupon[]) {
   const header = ["Código", "Desconto", "Lavanderia", "Validade", "Limite de uso", "Status"];
-  const lines = items.map((c) => {
-    const cols = [
-      c.code,
-      discountLabel(c),
-      storeScope(c),
-      periodLabel(c.validFrom, c.validTo),
-      c.usageLimit == null ? "Ilimitado" : String(c.usageLimit),
-      couponStatus(c),
-    ];
-    return cols.map((v) => `"${v.replaceAll('"', '""')}"`).join(";");
-  });
-  return [header.join(";"), ...lines].join("\n");
+  const rows = items.map((c) => [
+    c.code,
+    discountLabel(c),
+    storeScope(c),
+    periodLabel(c.validFrom, c.validTo),
+    c.usageLimit == null ? "Ilimitado" : String(c.usageLimit),
+    couponStatus(c),
+  ]);
+  return { header, rows };
+}
+
+export function couponsCsv(items: Coupon[]) {
+  const { header, rows } = couponsSheet(items);
+  return [header.join(";"), ...rows.map((cols) => cols.map((v) => `"${v.replaceAll('"', '""')}"`).join(";"))].join("\n");
 }
 
 export function downloadCsv(filename: string, content: string) {

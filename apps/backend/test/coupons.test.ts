@@ -60,6 +60,12 @@ describe("cupons", () => {
     const list = await s.app.inject({ method: "GET", url: `/coupons?storeId=${store.id}`, headers: ADMIN });
     expect(list.json().total).toBe(1);
     expect(list.json().items[0].id).toBe(coupon.id);
+    const empty = (await s.app.inject({
+      method: "GET",
+      url: `/coupons?storeId=${store.id}&from=2000-01-01&to=2000-01-02`,
+      headers: ADMIN,
+    })).json();
+    expect(empty.total).toBe(0);
 
     const patched = await s.app.inject({
       method: "PATCH",
