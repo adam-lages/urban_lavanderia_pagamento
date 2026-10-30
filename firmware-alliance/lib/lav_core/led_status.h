@@ -27,4 +27,6 @@ inline RgbColor ledColor(const LedInputs& in, const LedPattern& cmd) {
   return RgbColor::Red;
 }
 
+inline bool onboardLedOn(RgbColor c) { return c == RgbColor::Blue || c == RgbColor::Green; }
+
 }  // namespace lav

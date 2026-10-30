@@ -67,6 +67,22 @@ void test_led_color_states() {
   TEST_ASSERT_EQUAL(static_cast<int>(RgbColor::Red), static_cast<int>(ledColor(in, p)));
 }
 
+void test_onboard_led_follows_status() {
+  LedPattern p{3, 150, 2000};
+  LedInputs in{true, true, 100000, false, 0, false};
+  TEST_ASSERT_TRUE(onboardLedOn(ledColor(in, p)));
+  in.cmdActive = true;
+  TEST_ASSERT_TRUE(onboardLedOn(ledColor(in, p)));
+  in.cmdElapsedMs = 150;
+  TEST_ASSERT_FALSE(onboardLedOn(ledColor(in, p)));
+  in.cmdElapsedMs = 1500;
+  TEST_ASSERT_TRUE(onboardLedOn(ledColor(in, p)));
+  in = LedInputs{true, true, 100000, false, 0, true};
+  TEST_ASSERT_FALSE(onboardLedOn(ledColor(in, p)));
+  in = LedInputs{false, true, 100000, false, 0, false};
+  TEST_ASSERT_FALSE(onboardLedOn(ledColor(in, p)));
+}
+
 void test_parse_command() {
   Command c;
   TEST_ASSERT_EQUAL(ParseResult::Ok, parseCommand(kCmd, strlen(kCmd), c));
@@ -208,6 +224,7 @@ int main() {
   RUN_TEST(test_hex);
   RUN_TEST(test_led_pattern);
   RUN_TEST(test_led_color_states);
+  RUN_TEST(test_onboard_led_follows_status);
   RUN_TEST(test_chunker);
   RUN_TEST(test_serial_sniffer);
   RUN_TEST(test_serial_never_releases_or_sends_by_default);

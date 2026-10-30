@@ -23,6 +23,8 @@ pio device monitor
 
 Se travar em `Connecting...`, segure **BOOT**. No serial aparece `placa esp-...`. No dashboard, **Liberar** deve piscar o LED 3 vezes e ficar aceso ~2 s.
 
+LED azul da placa: aceso fixo = conectado; pisca 3 vezes = liberação recebida; apagado = sem conexão ou erro. O LED vermelho é de energia e fica sempre aceso.
+
 `channel` neste firmware é **1 a 32** (quantidade de pulsos). No mock o LED ignora o número.
 
 ## 2. Pulso (só depois de medir)

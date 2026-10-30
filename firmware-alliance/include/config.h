@@ -29,8 +29,8 @@
 #define GPIO_PULSE_MIN_MS 20
 #define GPIO_PULSE_MAX_MS 5000
 
-#ifndef MOCK_LED_PIN
-#define MOCK_LED_PIN 2
+#ifndef ONBOARD_LED_PIN
+#define ONBOARD_LED_PIN 2
 #endif
 #ifndef CMD_BLINKS
 #define CMD_BLINKS 3

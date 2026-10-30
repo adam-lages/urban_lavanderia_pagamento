@@ -42,7 +42,7 @@ Hoje existem três “modos” (drivers), escolhidos na hora de gravar:
 
 | Modo (ambiente PlatformIO) | O que faz |
 | --- | --- |
-| `esp32doit-mock` | Só pisca o **LED azul** da placa quando chega “liberar” (3 piscadas + ~2 s aceso). Comece sempre por aqui. |
+| `esp32doit-mock` | Não aciona a máquina: só o **LED azul** da placa pisca 3 vezes quando chega “liberar”. Comece sempre por aqui. |
 | `esp32doit-serial` | **Chicote de cartão (ESDUS).** Só **escuta** a serial. Ainda **não** libera: a LG não publica os bytes. O “canal 100” é o **preço `r9Pr`**, não protocolo Cicclo |
 | `esp32doit-gpio` | Plano B: pulso **50 ms** no GPIO 23 (opto) = moeda ou Start — **não** ligue 220 V, 16,5 V nem 12,5 V na ESP32 |
 
@@ -75,7 +75,7 @@ pio run -e esp32doit-mock -t upload
 pio device monitor
 ```
 
-4. No serial (115200) aparece o ID (`placa esp-…`). No dashboard, menu **Máquinas**, cadastre quando ficar **Online** e teste **Liberar** (o LED azul deve piscar 3 vezes e ficar aceso ~2 s).
+4. No serial (115200) aparece o ID (`placa esp-…`). No dashboard, menu **Máquinas**, cadastre quando ficar **Online** e teste **Liberar** (o LED azul, aceso fixo enquanto conectado, deve piscar 3 vezes e voltar a ficar aceso).
 
 Arduino IDE: mesma ideia (placa DOIT ESP32 DEVKIT V1, bibliotecas PubSubClient e ArduinoJson) — siga a seção 4 de `COMO-GRAVAR.md`. Prefira PlatformIO neste repo (`platformio.ini`).
 
@@ -123,11 +123,11 @@ Esses valores estão versionados porque o repositório é **privado**. Não publ
 | Nível ativo | `HIGH` (`GPIO_ACTIVE_LEVEL`; use `LOW` em relé “ativo em baixo”) |
 | Duração do pulso | **50** ms (`GPIO_PULSE_MS`; Coin Drop Type 0 da LG; permitido 20–5000) |
 
-### Driver mock
+### LED azul da placa (todos os modos)
 
-LED azul onboard no GPIO **2**. Ao receber “liberar”: **3 piscadas rápidas** (150 ms acende / 150 ms apaga) e depois **~2 s aceso**; então apaga e a placa responde “feito” ao servidor. Não trava o Wi-Fi/MQTT. Ajustes em `config.h`: `CMD_BLINKS`, `CMD_BLINK_MS`, `CMD_HOLD_MS`.
+LED azul onboard no GPIO **2** (`ONBOARD_LED_PIN`): pisca devagar = conectando; **aceso fixo** = Wi-Fi + MQTT conectados; **3 piscadas rápidas** (150 ms) ao receber “liberar”; **apagado** = sem conexão ou comando falhou. O LED vermelho da placa é de energia e fica sempre aceso (o firmware não controla). No modo mock, a placa responde “feito” ao servidor ~3 s depois do comando. Ajustes em `config.h`: `CMD_BLINKS`, `CMD_BLINK_MS`, `CMD_HOLD_MS`.
 
-**LED RGB externo (ativo por padrão)**: pinos R=25, G=26, B=27 e `RGB_COMMON_ANODE 0` (cátodo comum) em `secrets.h`. Material: LED RGB 5 mm cátodo comum + 3 resistores 220 Ω (cada cor em série; perna longa no GND). Azul piscando devagar = conectando; azul fixo = conectado; verde (3 piscadas rápidas + ~2 s fixo) = comando recebido; vermelho = sem Wi-Fi/MQTT ou comando falhou/expirou. Para ânodo comum: perna longa no 3V3 e `RGB_COMMON_ANODE 1`. Não ligue nada à máquina LG. Sem RGB ligado, o LED azul da placa segue igual. Ligação detalhada em `COMO-GRAVAR.md`. Obs.: o plano B `esp32doit-gpio` agora usa o GPIO 23 (era 26) para não colidir com o verde.
+**LED RGB externo (ativo por padrão)**: pinos R=25, G=26, B=27 e `RGB_COMMON_ANODE 0` (cátodo comum) em `secrets.h`. Material: LED RGB 5 mm cátodo comum + 3 resistores 220 Ω (cada cor em série; perna longa no GND). Azul piscando devagar = conectando; azul fixo = conectado; verde (3 piscadas rápidas + ~2 s fixo) = comando recebido; vermelho = sem Wi-Fi/MQTT ou comando falhou/expirou. Para ânodo comum: perna longa no 3V3 e `RGB_COMMON_ANODE 1`. Não ligue nada à máquina LG. Sem RGB ligado, o LED azul da placa continua mostrando o status. Ligação detalhada em `COMO-GRAVAR.md`. Obs.: o plano B `esp32doit-gpio` agora usa o GPIO 23 (era 26) para não colidir com o verde.
 
 **Como confirmar que o LED reage**: veja a seção “Teste do Liberar” em `COMO-GRAVAR.md`.
 

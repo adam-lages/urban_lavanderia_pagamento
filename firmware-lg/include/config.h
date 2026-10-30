@@ -27,11 +27,12 @@
 #define GPIO_PULSE_MIN_MS 20
 #define GPIO_PULSE_MAX_MS 5000
 
-// Driver mock (RELEASE_DRIVER=0)
-#ifndef MOCK_LED_PIN
-#define MOCK_LED_PIN 2
+// LED azul da placa: aceso = conectado; pisca = comando recebido; apagado = sem Wi-Fi/MQTT ou erro.
+// O LED vermelho da placa é de energia (ligado direto no 3,3 V): fica sempre aceso, o firmware não controla.
+#ifndef ONBOARD_LED_PIN
+#define ONBOARD_LED_PIN 2
 #endif
-// Padrão ao receber "liberar": 3 piscadas rápidas + ~2 s aceso, depois apaga.
+// Padrão ao receber "liberar": 3 piscadas rápidas + ~2 s aceso.
 #ifndef CMD_BLINKS
 #define CMD_BLINKS 3
 #endif

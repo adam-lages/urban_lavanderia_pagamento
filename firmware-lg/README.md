@@ -77,7 +77,7 @@ O `secrets.h` é versionado de propósito (repositório PRIVADO). Nunca torne o 
    ```
    Se o upload travar em "Connecting...", segure o botão **BOOT** até começar.
 5. No monitor serial aparece `placa esp-a4cf120b00ff` (derivada do MAC). Esse é o ID da placa.
-6. Abra o dashboard, menu **Máquinas**: a placa nova aparece **Online**. Clique em **Cadastrar** (nome, loja, tipo) e em **Liberar máquina**. O LED onboard acende por 1,5 s e o estado vira **Confirmado**.
+6. Abra o dashboard, menu **Máquinas**: a placa nova aparece **Online**. Clique em **Cadastrar** (nome, loja, tipo) e em **Liberar máquina**. O LED azul da placa (aceso fixo enquanto conectado) pisca 3 vezes e o estado vira **Confirmado**.
 7. Só depois da continuidade/tensões, grave `esp32doit-serial` (sniffer). GPIO só como plano B de moeda/Start.
 
 ## Como funciona

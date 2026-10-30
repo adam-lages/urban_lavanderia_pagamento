@@ -4,41 +4,27 @@
 #include "led_pattern.h"
 #include "release_driver.h"
 
-/** Pisca o LED onboard (CMD_BLINKS piscadas + CMD_HOLD_MS aceso), sem bloquear. Não toca em nada externo: ideal para testar Wi-Fi/MQTT. */
-class MockLedDriver : public lav::ReleaseDriver {
+/** Simula a liberação sem tocar em nenhum pino; termina junto com o padrão de "comando recebido" do LED de status. */
+class MockDriver : public lav::ReleaseDriver {
  public:
-  explicit MockLedDriver(uint8_t pin) : pin_(pin) {}
   const char* name() const override { return "mock-led"; }
-  bool begin() override {
-    pinMode(pin_, OUTPUT);
-    digitalWrite(pin_, LOW);
-    return true;
-  }
+  bool begin() override { return true; }
   bool start(int, const char** reason) override {
     if (state_ == lav::DriverState::Busy) {
       if (reason) *reason = "busy";
       return false;
     }
-    digitalWrite(pin_, HIGH);  // primeira piscada começa já
     startedMs_ = millis();
     state_ = lav::DriverState::Busy;
     return true;
   }
   void loop(uint32_t nowMs) override {
-    if (state_ != lav::DriverState::Busy) return;
-    const uint32_t elapsed = nowMs - startedMs_;
-    if (pattern_.finished(elapsed)) {
-      digitalWrite(pin_, LOW);
-      state_ = lav::DriverState::Done;
-    } else {
-      digitalWrite(pin_, pattern_.isOn(elapsed) ? HIGH : LOW);
-    }
+    if (state_ == lav::DriverState::Busy && pattern_.finished(nowMs - startedMs_)) state_ = lav::DriverState::Done;
   }
   lav::DriverState state() const override { return state_; }
   void acknowledge() override { state_ = lav::DriverState::Idle; }
 
  private:
-  uint8_t pin_;
   uint32_t startedMs_ = 0;
   lav::LedPattern pattern_{CMD_BLINKS, CMD_BLINK_MS, CMD_HOLD_MS};
   lav::DriverState state_ = lav::DriverState::Idle;

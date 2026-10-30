@@ -1,31 +1,36 @@
 #pragma once
 #include <Arduino.h>
 #include "config.h"
+#include "led_status.h"
 
 class StatusLed {
  public:
-  enum Color { Off, Blue, Green, Red };
-
-  static constexpr bool enabled() { return RGB_R_PIN >= 0 && RGB_G_PIN >= 0 && RGB_B_PIN >= 0; }
-
   void begin() {
-    if (!enabled()) return;
-    pinMode(RGB_R_PIN, OUTPUT);
-    pinMode(RGB_G_PIN, OUTPUT);
-    pinMode(RGB_B_PIN, OUTPUT);
-    last_ = static_cast<Color>(-1);
-    set(Off);
+    if (hasOnboard()) pinMode(ONBOARD_LED_PIN, OUTPUT);
+    if (hasRgb()) {
+      pinMode(RGB_R_PIN, OUTPUT);
+      pinMode(RGB_G_PIN, OUTPUT);
+      pinMode(RGB_B_PIN, OUTPUT);
+    }
+    initialized_ = false;
+    set(lav::RgbColor::Off);
   }
 
-  void set(Color c) {
-    if (!enabled() || c == last_) return;
+  void set(lav::RgbColor c) {
+    if (initialized_ && c == last_) return;
+    initialized_ = true;
     last_ = c;
-    write(RGB_R_PIN, c == Red);
-    write(RGB_G_PIN, c == Green);
-    write(RGB_B_PIN, c == Blue);
+    if (hasOnboard()) digitalWrite(ONBOARD_LED_PIN, lav::onboardLedOn(c) ? HIGH : LOW);
+    if (!hasRgb()) return;
+    writeRgb(RGB_R_PIN, c == lav::RgbColor::Red);
+    writeRgb(RGB_G_PIN, c == lav::RgbColor::Green);
+    writeRgb(RGB_B_PIN, c == lav::RgbColor::Blue);
   }
 
  private:
-  static void write(int pin, bool on) { digitalWrite(pin, (on != (RGB_COMMON_ANODE != 0)) ? HIGH : LOW); }
-  Color last_ = Off;
+  static constexpr bool hasOnboard() { return ONBOARD_LED_PIN >= 0; }
+  static constexpr bool hasRgb() { return RGB_R_PIN >= 0 && RGB_G_PIN >= 0 && RGB_B_PIN >= 0; }
+  static void writeRgb(int pin, bool on) { digitalWrite(pin, (on != (RGB_COMMON_ANODE != 0)) ? HIGH : LOW); }
+  lav::RgbColor last_ = lav::RgbColor::Off;
+  bool initialized_ = false;
 };

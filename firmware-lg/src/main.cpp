@@ -30,7 +30,7 @@ static HardwareSerialTransport serialTransport;
 static lav::SerialDriver driverImpl(serialTransport, SERIAL_SNIFFER_GAP_MS, SERIAL_DEBUG_TX);
 #else
 #include "mock_driver.h"
-static MockLedDriver driverImpl(MOCK_LED_PIN);
+static MockDriver driverImpl;
 #endif
 static lav::ReleaseDriver& driver = driverImpl;
 
@@ -266,19 +266,13 @@ void setup() {
 static bool everConnected = false;
 
 static void updateStatusLed() {
-  if (!StatusLed::enabled()) return;
   const uint32_t now = millis();
   const bool connected = mqtt.connected();
   if (connected) everConnected = true;
   if (cmdLedStart && kCmdPattern.finished(now - cmdLedStart)) cmdLedStart = 0;
   lav::LedInputs in{connected, everConnected, now - bootMs, cmdLedStart != 0, now - cmdLedStart,
                     static_cast<int32_t>(errorLedUntil - now) > 0};
-  switch (lav::ledColor(in, kCmdPattern)) {
-    case lav::RgbColor::Blue: statusLed.set(StatusLed::Blue); break;
-    case lav::RgbColor::Green: statusLed.set(StatusLed::Green); break;
-    case lav::RgbColor::Red: statusLed.set(StatusLed::Red); break;
-    default: statusLed.set(StatusLed::Off); break;
-  }
+  statusLed.set(lav::ledColor(in, kCmdPattern));
 }
 
 void loop() {

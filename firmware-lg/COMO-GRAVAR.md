@@ -32,7 +32,16 @@ Para mudar a rede:
 
 ## 2. Primeiro teste: modo mock (só o LED)
 
-No modo **mock** a placa **não aciona a máquina**. Quando o dashboard manda “liberar”, o **LED azul da própria ESP32** pisca **3 vezes rápido**, fica **aceso uns 2 segundos** e apaga.
+No modo **mock** a placa **não aciona a máquina**.
+
+**LED azul da própria ESP32** (vale para todos os modos):
+
+- Pisca devagar = conectando ao Wi-Fi.
+- **Aceso fixo** = Wi-Fi + servidor (MQTT) conectados.
+- Ao receber “liberar”: **pisca 3 vezes rápido** e volta a ficar aceso.
+- **Apagado** = sem conexão ou o comando falhou.
+
+O **LED vermelho** da placa é só o indicador de energia: fica sempre aceso enquanto a placa tem alimentação. O programa não consegue controlá-lo. Para ter uma luz vermelha de erro, use o LED RGB (seção abaixo).
 
 Comece **sempre** por esse modo.
 
@@ -71,7 +80,7 @@ pio device monitor
 3. **Firewall**: libere a porta **TCP 1883** de entrada no PC (Windows: “Firewall do Windows” → nova regra de entrada). Sem isso a placa nunca fica Online.
 4. Grave o `esp32doit-mock` e abra o monitor serial. Anote o ID (`esp-...`).
 5. No dashboard → **Máquinas**: a placa aparece **Online**. Dê o nome **Lavadora 1** (loja e tipo Lavadora) e salve. Dica: se o backend subir com `DEMO_BOARD_ID=esp-SEU_ID`, a placa já nasce como “Lavadora 1” no banco novo.
-6. Clique em **Liberar** na Lavadora 1. O LED azul da placa deve: **piscar 3 vezes rápido → ficar aceso ~2 s → apagar**. No monitor serial aparece `[cmd] executando` e depois `[ack]`.
+6. Clique em **Liberar** na Lavadora 1. O LED azul da placa (que já estava aceso) deve **piscar 3 vezes rápido** e voltar a ficar aceso. No monitor serial aparece `[cmd] executando` e depois `[ack]`.
 
 Se não piscar: placa Offline (confira IP, porta, firewall, Wi-Fi) ou ID diferente do cadastrado.
 
@@ -96,7 +105,7 @@ Detalhes extras (GPIO, serial, MQTT) estão em [`README.md`](README.md).
 
 **Ânodo comum** (perna longa vai ao 3,3 V): ligue a perna longa no **3V3** e troque em `firmware-lg/include/secrets.h` para `#define RGB_COMMON_ANODE 1`.
 
-**Sem RGB ligado**: nada quebra; o LED azul da própria placa continua piscando como antes. Para desligar o recurso, comente as 3 linhas `RGB_*_PIN` em `secrets.h`.
+**Sem RGB ligado**: nada quebra; o LED azul da própria placa continua mostrando o status (aceso = conectado, apagado = erro). Para desligar o recurso, comente as 3 linhas `RGB_*_PIN` em `secrets.h`.
 
 ## 4. Gravar com Arduino IDE (versão curta)
 
